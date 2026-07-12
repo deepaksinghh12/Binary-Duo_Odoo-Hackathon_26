@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import { env } from '../config/env';
 
 /**
  * Global rate limiter — applied to ALL routes.
@@ -18,11 +19,11 @@ export const globalRateLimiter = rateLimit({
 
 /**
  * Strict auth limiter — applied to /auth/login and /auth/signup.
- * 5 requests per 15 minutes per IP.
+ * 5 requests per 15 minutes per IP (100 in development for testing).
  */
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: env.isDev ? 100 : 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

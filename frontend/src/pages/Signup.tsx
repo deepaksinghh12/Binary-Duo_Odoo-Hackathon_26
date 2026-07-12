@@ -39,9 +39,10 @@ export const Signup: React.FC = () => {
   };
 
   const handleVerified = (data: any) => {
-    // Save token if returned, then redirect to dashboard or login
+    // Save token if returned, then redirect to dashboard
     if (data.data?.token) {
       localStorage.setItem('token', data.data.token);
+      localStorage.setItem('user', JSON.stringify(data.data.user));
     }
     navigate('/dashboard');
   };
@@ -76,21 +77,22 @@ export const Signup: React.FC = () => {
 
       <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-6 sm:p-12 relative bg-white overflow-y-auto">
         <div className="w-full max-w-md bg-white rounded-3xl p-8 sm:p-10 shadow-[0_30px_60px_-15px_rgba(13,59,62,0.3)] my-auto transition-shadow duration-300">
+          
           <div className="text-center mb-10">
             <div className="lg:hidden flex justify-center mb-8">
               <img src={logo} alt="EcoSphere Logo" className="w-48 object-contain" />
             </div>
-            <h1 className="text-3xl font-extrabold text-[#0D3B3E] mb-1 tracking-wide uppercase">SIGN UP</h1>
-            <p className="text-slate-500 font-medium text-base">Create your account</p>
+            <h1 className="text-3xl font-extrabold text-[#0D3B3E] mb-1 tracking-wide uppercase">CREATE ACCOUNT</h1>
+            <p className="text-slate-500 font-medium text-base">Register your ESG profile</p>
           </div>
-          
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {errorMsg && (
               <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100 font-medium text-center">
                 {errorMsg}
               </div>
             )}
-            
+
             <div className="flex flex-col gap-3 pt-2">
               <Input
                 label="Full Name"
@@ -98,7 +100,7 @@ export const Signup: React.FC = () => {
                 icon={<MdPerson />}
                 {...register('name')}
                 error={errors.name?.message}
-                className="bg-slate-50/50 border-slate-200 focus:bg-white h-12 transition-all"
+                className="bg-slate-50/50 border-slate-200 focus:bg-white h-11 transition-all"
               />
 
               <Input
@@ -107,16 +109,16 @@ export const Signup: React.FC = () => {
                 icon={<MdEmail />}
                 {...register('email')}
                 error={errors.email?.message}
-                className="bg-slate-50/50 border-slate-200 focus:bg-white h-12 transition-all"
+                className="bg-slate-50/50 border-slate-200 focus:bg-white h-11 transition-all"
               />
-              
+
               <Input
                 label="Password"
                 type="password"
                 icon={<MdLock />}
                 {...register('password')}
                 error={errors.password?.message}
-                className="bg-slate-50/50 border-slate-200 focus:bg-white h-12 transition-all"
+                className="bg-slate-50/50 border-slate-200 focus:bg-white h-11 transition-all"
               />
 
               <Input
@@ -125,11 +127,11 @@ export const Signup: React.FC = () => {
                 icon={<MdLock />}
                 {...register('confirmPassword')}
                 error={errors.confirmPassword?.message}
-                className="bg-slate-50/50 border-slate-200 focus:bg-white h-12 transition-all"
+                className="bg-slate-50/50 border-slate-200 focus:bg-white h-11 transition-all"
               />
             </div>
 
-            <div className="flex justify-center mt-8">
+            <div className="flex justify-center mt-6">
               <button
                 type="submit"
                 disabled={isLoading}
@@ -141,7 +143,7 @@ export const Signup: React.FC = () => {
                     CREATING ACCOUNT...
                   </span>
                 ) : (
-                  'SIGN UP'
+                  'CREATE ACCOUNT'
                 )}
               </button>
             </div>
@@ -153,6 +155,7 @@ export const Signup: React.FC = () => {
               Sign in
             </Link>
           </div>
+
         </div>
       </div>
 
@@ -165,3 +168,4 @@ export const Signup: React.FC = () => {
     </div>
   );
 };
+export default Signup;

@@ -4,18 +4,23 @@ import { env } from '../../config/env';
 import { ConflictError, UnauthorizedError, BadRequestError } from '../../shared/errors';
 import { validate } from '../../utils/validate';
 import { authRepository } from './auth.repository';
-import { CreateUserInput, LoginInput, AuthResponseData, VerifyOtpInput } from './auth.types';
+import { CreateUserInput, LoginInput, AuthResponseData, VerifyOtpInput, PendingSignup } from './auth.types';
 import { signupSchema, loginSchema, verifyOtpSchema } from './auth.validation';
+import { cache } from '../../utils/cache';
+
+// Expiry for pending registration (15 minutes in milliseconds)
+const PENDING_REGISTRATION_EXPIRY = 15 * 60 * 1000;
 
 export const authService = {
   /**
-   * Register a new user. Creates the account as unverified and triggers OTP send.
+   * Register a new user.
+   * Generates OTP, stores user info temporarily in cache, and does NOT write to database yet.
    */
-  async signup(input: CreateUserInput): Promise<{ message: string; email: string }> {
+  async signup(input: CreateUserInput): Promise<{ success: boolean; message: string }> {
     // 1. Validate payload structure using schema helper
     const payload = validate(signupSchema, input);
 
-    // 2. Check if user already exists
+    // 2. Check if user already exists in PostgreSQL
     const existingUser = await authRepository.findByEmail(payload.email);
     if (existingUser) {
       throw new ConflictError('Email already registered');
@@ -25,38 +30,45 @@ export const authService = {
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(payload.password, salt);
 
-    // 4. Create the user in database as unverified
-    await authRepository.createUser({
+    // 4. Generate secure 6-digit OTP
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 5. Store pending signup in cache with 15 minutes TTL
+    const cacheKey = `signup:pending:${payload.email}`;
+    const pendingData: PendingSignup = {
       name: payload.name,
       email: payload.email,
-      password_hash: passwordHash,
+      passwordHash,
       role: payload.role ?? 'employee',
-      department_id: payload.departmentId,
-    });
+      departmentId: payload.departmentId,
+      code,
+    };
+    await cache.set(cacheKey, pendingData, PENDING_REGISTRATION_EXPIRY);
 
-    // 5. Send verification OTP
-    await this.sendOtp(payload.email);
+    // 6. Simulate sending email (print OTP code to terminal console)
+    console.log(`\n📧 [EMAIL SIMULATION] Sent OTP to "${payload.email}": ${code} (expires in 15 minutes)\n`);
 
     return {
-      message: 'Registration successful. Verification OTP sent to email.',
-      email: payload.email,
+      success: true,
+      message: 'OTP sent to email.',
     };
   },
 
   /**
-   * Log in an existing user. If user is unverified, blocks access and sends a new OTP.
+   * Log in an existing user.
+   * Directly authenticates using PostgreSQL database (all users in DB are verified).
    */
-  async login(input: LoginInput): Promise<AuthResponseData | { otpRequired: true; email: string; message: string }> {
+  async login(input: LoginInput): Promise<AuthResponseData> {
     // 1. Validate payload
     const payload = validate(loginSchema, input);
 
-    // 2. Find user
+    // 2. Find user in database
     const user = await authRepository.findByEmail(payload.email);
     if (!user) {
       throw new UnauthorizedError('Invalid credentials');
     }
 
-    // 3. Check if user account is deactivated
+    // 3. Check if user account is active
     if (!user.is_active) {
       throw new UnauthorizedError('Account is deactivated. Please contact an admin.');
     }
@@ -67,17 +79,7 @@ export const authService = {
       throw new UnauthorizedError('Invalid credentials');
     }
 
-    // 5. If user is not verified, require OTP verification first
-    if (!user.is_verified) {
-      await this.sendOtp(user.email);
-      return {
-        otpRequired: true,
-        email: user.email,
-        message: 'Account not verified. Verification OTP sent.',
-      };
-    }
-
-    // 6. Generate JWT for verified user
+    // 5. Generate JWT token
     const token = this.generateToken(user.id, user.email, user.role);
 
     return {
@@ -95,65 +97,73 @@ export const authService = {
   },
 
   /**
-   * Generate and send a 6-digit OTP verification code.
-   * Logs code to console for development testing.
+   * Generate and send a fresh OTP for a pending registration.
    */
   async sendOtp(email: string): Promise<{ success: boolean; message: string }> {
-    // Generate a secure 6-digit code
+    const cacheKey = `signup:pending:${email}`;
+    const pendingData = await cache.get<PendingSignup>(cacheKey);
+    
+    if (!pendingData) {
+      throw new BadRequestError('No pending registration found for this email. Please sign up first.');
+    }
+
+    // Generate new OTP
     const code = Math.floor(100000 + Math.random() * 900000).toString();
+    pendingData.code = code;
 
-    // Expire in 5 minutes
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    // Reset TTL in cache
+    await cache.set(cacheKey, pendingData, PENDING_REGISTRATION_EXPIRY);
 
-    // Save to database
-    await authRepository.saveOtp(email, code, expiresAt);
-
-    // Log code to terminal in development/testing mode so users can view it
-    console.log(`\n📧 [EMAIL SIMULATION] Sent OTP to "${email}": ${code} (expires in 5 minutes)\n`);
+    // Log code to terminal
+    console.log(`\n📧 [EMAIL SIMULATION] Sent OTP to "${email}": ${code} (expires in 15 minutes)\n`);
 
     return {
       success: true,
-      message: 'Verification OTP sent successfully.',
+      message: 'Verification OTP sent successfully',
     };
   },
 
   /**
-   * Verify the OTP and issue a JWT to complete authentication.
+   * Verify the OTP, save the user to database, clear cache, and issue final JWT.
    */
   async verifyOtp(input: VerifyOtpInput): Promise<AuthResponseData> {
-    // 1. Validate payload
     const payload = validate(verifyOtpSchema, input);
 
-    // 2. Find active OTP
-    const activeOtp = await authRepository.findActiveOtp(payload.email, payload.code);
-    if (!activeOtp) {
+    // 1. Fetch pending signup from cache
+    const cacheKey = `signup:pending:${payload.email}`;
+    const pendingData = await cache.get<PendingSignup>(cacheKey);
+
+    if (!pendingData || pendingData.code !== payload.code) {
       throw new UnauthorizedError('Invalid or expired verification code');
     }
 
-    // 3. Mark OTP as used
-    await authRepository.markOtpAsUsed(activeOtp.id);
+    // 2. Clear cache entry
+    await cache.delete(cacheKey);
 
-    // 4. Mark user as verified
-    await authRepository.verifyUserEmail(payload.email);
+    // 3. Save user to PostgreSQL database
+    const createdUser = await authRepository.createUser({
+      name: pendingData.name,
+      email: pendingData.email,
+      password_hash: pendingData.passwordHash,
+      role: pendingData.role,
+      department_id: pendingData.departmentId,
+    });
 
-    // 5. Fetch user to return auth response
-    const user = await authRepository.findByEmail(payload.email);
-    if (!user) {
-      throw new BadRequestError('User not found after verification');
-    }
+    // 4. Mark user verified in database (the repository marks is_verified: false by default, update to true)
+    await authRepository.verifyUserEmail(createdUser.email);
 
-    // 6. Generate final JWT
-    const token = this.generateToken(user.id, user.email, user.role);
+    // 5. Generate final JWT token
+    const token = this.generateToken(createdUser.id, createdUser.email, createdUser.role);
 
     return {
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        departmentId: user.department_id,
-        xpTotal: user.xp_total,
-        isVerified: user.is_verified,
+        id: createdUser.id,
+        name: createdUser.name,
+        email: createdUser.email,
+        role: createdUser.role,
+        departmentId: createdUser.department_id,
+        xpTotal: createdUser.xp_total,
+        isVerified: true,
       },
       token,
     };
@@ -170,3 +180,4 @@ export const authService = {
     );
   },
 };
+export default authService;

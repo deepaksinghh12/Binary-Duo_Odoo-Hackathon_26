@@ -10,15 +10,18 @@ router.use(authRateLimiter);
 
 /**
  * @route   POST /api/auth/signup
- * @desc    Register a new user (marks unverified, sends OTP)
+ * @desc    Register a new user (caches data, generates and sends OTP)
  * @access  Public
  */
 router.post(
   '/signup',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const data = await authService.signup(req.body);
-      sendSuccess(res, data, 'Registration successful. Verification OTP sent.', 201);
+      const result = await authService.signup(req.body);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
     } catch (error) {
       next(error);
     }
@@ -27,19 +30,15 @@ router.post(
 
 /**
  * @route   POST /api/auth/login
- * @desc    Log in an existing user (if unverified, requires OTP validation)
+ * @desc    Log in an existing user
  * @access  Public
  */
 router.post(
   '/login',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const result = await authService.login(req.body);
-      if ('otpRequired' in result) {
-        sendSuccess(res, result, 'Verification OTP sent. Verification required.', 200);
-      } else {
-        sendSuccess(res, result, 'Logged in successfully', 200);
-      }
+      const data = await authService.login(req.body);
+      sendSuccess(res, data, 'Logged in successfully', 200);
     } catch (error) {
       next(error);
     }
@@ -48,7 +47,7 @@ router.post(
 
 /**
  * @route   POST /api/auth/send-otp
- * @desc    Send a new OTP verification code
+ * @desc    Send a new OTP verification code for pending registration
  * @access  Public
  */
 router.post(
@@ -56,8 +55,11 @@ router.post(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email } = req.body;
-      const data = await authService.sendOtp(email);
-      sendSuccess(res, data, 'Verification OTP sent successfully', 200);
+      const result = await authService.sendOtp(email);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
     } catch (error) {
       next(error);
     }
@@ -66,7 +68,7 @@ router.post(
 
 /**
  * @route   POST /api/auth/verify-otp
- * @desc    Verify OTP and complete login / verification
+ * @desc    Verify OTP code, save user to database, and return JWT
  * @access  Public
  */
 router.post(
@@ -74,7 +76,7 @@ router.post(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const data = await authService.verifyOtp(req.body);
-      sendSuccess(res, data, 'Account verified and logged in successfully', 200);
+      sendSuccess(res, data, 'Account verified and created successfully', 200);
     } catch (error) {
       next(error);
     }

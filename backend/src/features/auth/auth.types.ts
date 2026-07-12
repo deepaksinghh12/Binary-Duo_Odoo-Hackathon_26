@@ -22,6 +22,15 @@ export interface VerifyOtpInput {
   code: string;
 }
 
+export interface PendingSignup {
+  name: string;
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+  departmentId?: string;
+  code: string;
+}
+
 export interface UserRecord {
   id: string;
   name: string;
