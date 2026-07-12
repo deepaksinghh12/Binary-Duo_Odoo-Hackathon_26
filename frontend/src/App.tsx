@@ -4,6 +4,18 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { EnvironmentalOverview } from './features/environmental/pages/EnvironmentalOverview';
+import { EmissionFactorList } from './features/environmental/pages/EmissionFactorList';
+import { ProductESGProfiles } from './features/environmental/pages/ProductESGProfiles';
+import { CarbonTransactions } from './features/environmental/pages/CarbonTransactions';
+import { EnvironmentalGoals } from './features/environmental/pages/EnvironmentalGoals';
+import { EnvironmentalLayout } from './features/environmental/layouts/EnvironmentalLayout';
+
+import { SocialLayout } from './features/social/layouts/SocialLayout';
+import { CSRActivities } from './features/social/pages/CSRActivities';
+import { EmployeeParticipationDashboard } from './features/social/pages/EmployeeParticipation';
+import { DiversityDashboard } from './features/social/pages/DiversityDashboard';
+
 import './index.css';
 
 // Placeholder for nested routes to show they exist
@@ -30,17 +42,21 @@ function App() {
           <Route index element={<DashboardPage />} />
           
           {/* Environmental Routes */}
-          <Route path="environmental" element={<PlaceholderContent title="Environmental Overview" />} />
-          <Route path="environmental/emissions" element={<PlaceholderContent title="Emission Factors" />} />
-          <Route path="environmental/products" element={<PlaceholderContent title="Product ESG Profiles" />} />
-          <Route path="environmental/transactions" element={<PlaceholderContent title="Carbon Transactions" />} />
-          <Route path="environmental/goals" element={<PlaceholderContent title="Environmental Goals" />} />
+          <Route path="environmental" element={<EnvironmentalLayout />}>
+            <Route index element={<Navigate to="emissions" replace />} />
+            <Route path="emissions" element={<EmissionFactorList />} />
+            <Route path="products" element={<ProductESGProfiles />} />
+            <Route path="transactions" element={<CarbonTransactions />} />
+            <Route path="goals" element={<EnvironmentalGoals />} />
+          </Route>
 
           {/* Social Routes */}
-          <Route path="social" element={<PlaceholderContent title="Social Overview" />} />
-          <Route path="social/csr" element={<PlaceholderContent title="CSR Activities" />} />
-          <Route path="social/participation" element={<PlaceholderContent title="Employee Participation" />} />
-          <Route path="social/diversity" element={<PlaceholderContent title="Diversity Dashboard" />} />
+          <Route path="social" element={<SocialLayout />}>
+            <Route index element={<Navigate to="csr" replace />} />
+            <Route path="csr" element={<CSRActivities />} />
+            <Route path="participation" element={<EmployeeParticipationDashboard />} />
+            <Route path="diversity" element={<DiversityDashboard />} />
+          </Route>
 
           {/* Governance Routes */}
           <Route path="governance" element={<PlaceholderContent title="Governance Overview" />} />
