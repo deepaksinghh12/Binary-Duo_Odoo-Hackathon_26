@@ -60,107 +60,25 @@ export const dashboardRepository = {
   },
 
   /**
-   * Fetch recent activities from all tables (Max 10 records).
+   * Fetch recent activities from the activity_log table (Max 10 records).
+   * Per Backend Alignment Addendum: use activity_log for the dashboard activity feed
    */
   async getRecentActivities(): Promise<RecentActivityItem[]> {
-    const activities: RecentActivityItem[] = [];
+    const exists = await this.tableExists('activity_log');
+    if (!exists) return [];
 
-    // A. Carbon Transactions
-    if (await this.tableExists('carbon_transactions')) {
-      const carbon = await db('carbon_transactions')
-        .select('id', 'activity_type as title', 'notes as description', 'created_at')
-        .orderBy('created_at', 'desc')
-        .limit(10);
+    const activities = await db('activity_log')
+      .select('id', 'type', 'message', 'entity_type', 'created_at')
+      .orderBy('created_at', 'desc')
+      .limit(10);
 
-      carbon.forEach((c) => {
-        activities.push({
-          id: String(c.id),
-          type: 'carbon_transaction',
-          title: String(c.title),
-          description: String(c.description || 'Carbon emission logged'),
-          timestamp: new Date(c.created_at),
-        });
-      });
-    }
-
-    // B. Challenges
-    if (await this.tableExists('challenges')) {
-      const challenges = await db('challenges')
-        .select('id', 'title', 'description', 'status', 'created_at')
-        .orderBy('created_at', 'desc')
-        .limit(10);
-
-      challenges.forEach((ch) => {
-        activities.push({
-          id: String(ch.id),
-          type: 'challenge',
-          title: String(ch.title),
-          description: String(ch.description || 'New sustainability challenge started'),
-          status: String(ch.status),
-          timestamp: new Date(ch.created_at),
-        });
-      });
-    }
-
-    // C. CSR Activities
-    if (await this.tableExists('csr_activities')) {
-      const csr = await db('csr_activities')
-        .select('id', 'title', 'description', 'created_at')
-        .orderBy('created_at', 'desc')
-        .limit(10);
-
-      csr.forEach((cs) => {
-        activities.push({
-          id: String(cs.id),
-          type: 'csr',
-          title: String(cs.title),
-          description: String(cs.description || 'New CSR activity hosted'),
-          timestamp: new Date(cs.created_at),
-        });
-      });
-    }
-
-    // D. Policies
-    if (await this.tableExists('policies')) {
-      const policies = await db('policies')
-        .select('id', 'title', 'description', 'created_at')
-        .orderBy('created_at', 'desc')
-        .limit(10);
-
-      policies.forEach((p) => {
-        activities.push({
-          id: String(p.id),
-          type: 'policy',
-          title: String(p.title),
-          description: String(p.description || 'ESG policy updated'),
-          timestamp: new Date(p.created_at),
-        });
-      });
-    }
-
-    // E. Compliance Issues
-    if (await this.tableExists('compliance_issues')) {
-      const compliance = await db('compliance_issues')
-        .select('id', 'title', 'description', 'status', 'created_at')
-        .orderBy('created_at', 'desc')
-        .limit(10);
-
-      compliance.forEach((co) => {
-        activities.push({
-          id: String(co.id),
-          type: 'compliance',
-          title: String(co.title),
-          description: String(co.description || 'Compliance event flagged'),
-          status: String(co.status),
-          timestamp: new Date(co.created_at),
-        });
-      });
-    }
-
-    // Sort combined activities descending by timestamp and limit to 10
-    return activities
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 10);
+    return activities.map((a: any) => ({
+      id: String(a.id),
+      type: String(a.type) as 'carbon_transaction' | 'challenge' | 'compliance' | 'csr' | 'policy',
+      title: String(a.message).substring(0, 100), // First 100 chars as title
+      description: String(a.message),
+      timestamp: new Date(a.created_at),
+    }));
   },
 };
 export default dashboardRepository;

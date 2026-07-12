@@ -17,16 +17,47 @@ const bootstrap = async (): Promise<void> => {
 
   // ── Start Express server ──────────────────────────────────────────────────
   const app = createApp();
-
   const server = app.listen(env.PORT, () => {
     console.log(`\n🚀 EcoSphere API running on http://localhost:${env.PORT}`);
     console.log(`   Environment : ${env.NODE_ENV}`);
     console.log(`   Health check: http://localhost:${env.PORT}/health\n`);
   });
 
+  // ── Scheduled Background Jobs (12-hour intervals) ─────────────────────────
+  const { NotificationsService } = require('./features/notifications/notifications.service');
+  const notificationsService = new NotificationsService();
+
+  const complianceJobInterval = setInterval(async () => {
+    try {
+      console.log('⏰ Running scheduled task: Overdue Compliance Issues check...');
+      const res = await notificationsService.notifyOverdueComplianceIssues();
+      console.log(`✅ Compliance check complete. Notified: ${res.notified_count}`);
+    } catch (e) {
+      console.error('❌ Compliance check failed:', e);
+    }
+  }, 12 * 60 * 60 * 1000);
+
+  const policyReminderInterval = setInterval(async () => {
+    try {
+      console.log('⏰ Running scheduled task: Unacknowledged Policy Reminders check...');
+      await notificationsService.sendPolicyReminders();
+      console.log('✅ Policy reminders complete.');
+    } catch (e) {
+      console.error('❌ Policy reminders failed:', e);
+    }
+  }, 12 * 60 * 60 * 1000);
+
+  // Run once immediately on start for test verification
+  setTimeout(() => {
+    notificationsService.notifyOverdueComplianceIssues().catch(console.error);
+    notificationsService.sendPolicyReminders().catch(console.error);
+  }, 5000);
+
   // ── Graceful shutdown ─────────────────────────────────────────────────────
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`\n[${signal}] Shutting down gracefully...`);
+    clearInterval(complianceJobInterval);
+    clearInterval(policyReminderInterval);
     server.close(async () => {
       await db.destroy();
       console.log('Database connections closed.');

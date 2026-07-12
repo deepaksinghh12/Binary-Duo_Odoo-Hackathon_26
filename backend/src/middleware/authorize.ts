@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { ForbiddenError } from '../shared/errors';
 import { AuthenticatedRequest, UserRole } from '../shared/types';
 
@@ -8,12 +8,13 @@ import { AuthenticatedRequest, UserRole } from '../shared/types';
  * Must be mounted AFTER the authenticate middleware.
  */
 export const authorize = (...allowedRoles: UserRole[]) => {
-  return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
-    if (!req.user) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.user) {
       return next(new ForbiddenError('User context not found. Authentication required first.'));
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!allowedRoles.includes(authReq.user.role)) {
       return next(new ForbiddenError('You do not have permission to access this resource.'));
     }
 
