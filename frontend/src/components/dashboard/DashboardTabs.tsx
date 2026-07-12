@@ -13,7 +13,7 @@ export const DashboardTabs: React.FC = () => {
   ];
 
   return (
-    <div className="mb-3 lg:mb-4 overflow-x-auto custom-scrollbar shrink-0">
+    <div className="pb-3 lg:pb-4 overflow-x-auto custom-scrollbar shrink-0">
       <nav className="flex w-full min-w-max gap-2 bg-white p-2 rounded-full border border-slate-200 shadow-sm">
         {tabs.map((tab) => (
           <NavLink

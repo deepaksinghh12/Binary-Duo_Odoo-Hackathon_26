@@ -11,12 +11,13 @@ interface SelectProps {
   value: string;
   onChange: (value: string) => void;
   icon?: React.ReactNode;
-  label: string;
+  label?: string;
   activeColorClass?: string;
+  disabled?: boolean;
 }
 
 export const Select: React.FC<SelectProps> = ({
-  options, value, onChange, icon, label, activeColorClass = 'border-[#4CAF3A]'
+  options, value, onChange, icon, label, activeColorClass = 'border-[#4CAF3A]', disabled
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -42,17 +43,19 @@ export const Select: React.FC<SelectProps> = ({
       )}
       
       <div 
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full ${icon ? 'pl-10' : 'pl-4'} pr-10 py-3 border rounded-xl cursor-pointer transition-all bg-transparent ${isOpen ? activeColorClass : 'border-slate-200'}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full ${icon ? 'pl-10' : 'pl-4'} pr-10 py-3 border rounded-xl transition-all ${disabled ? 'bg-slate-50 cursor-not-allowed opacity-70' : 'bg-transparent cursor-pointer'} ${isOpen && !disabled ? activeColorClass : 'border-slate-200'}`}
       >
         <span className={value ? 'text-slate-800' : 'text-transparent'}>
           {selectedOption ? selectedOption.label : 'Select'}
         </span>
       </div>
 
-      <label className={`absolute transition-all pointer-events-none bg-white px-1 ${value || isOpen ? 'left-3 -top-2 text-xs' : `${icon ? 'left-10' : 'left-4'} top-1/2 -translate-y-1/2`} text-slate-400 z-10`}>
-        {label}
-      </label>
+      {label && (
+        <label className={`absolute transition-all pointer-events-none bg-white px-1 ${value || isOpen ? 'left-3 -top-2 text-xs' : `${icon ? 'left-10' : 'left-4'} top-1/2 -translate-y-1/2`} text-slate-400 z-10`}>
+          {label}
+        </label>
+      )}
 
       <MdKeyboardArrowDown className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} pointer-events-none`} size={22} />
 

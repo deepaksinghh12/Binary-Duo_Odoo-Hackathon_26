@@ -23,10 +23,14 @@ export const DashboardLayout: React.FC = () => {
       <div className="flex-1 flex flex-col w-full min-w-0 transition-all duration-300">
         <TopNavbar toggleSidebar={toggleSidebar} />
 
-        {/* Scrollable Main Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/50 px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 lg:pt-5 flex flex-col">
+        {/* Fixed Dashboard Tabs area */}
+        <div className="bg-slate-50 px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 lg:pt-5 shrink-0 z-20">
           <DashboardTabs />
-          <div className="flex-1 w-full pb-6">
+        </div>
+
+        {/* Scrollable Main Content */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 px-4 sm:px-6 lg:px-8 flex flex-col">
+          <div className="flex-1 w-full pb-6 pt-1">
             <Outlet />
           </div>
         </main>

@@ -4,7 +4,6 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
-import { EnvironmentalOverview } from './features/environmental/pages/EnvironmentalOverview';
 import { EmissionFactorList } from './features/environmental/pages/EmissionFactorList';
 import { ProductESGProfiles } from './features/environmental/pages/ProductESGProfiles';
 import { CarbonTransactions } from './features/environmental/pages/CarbonTransactions';
@@ -15,6 +14,9 @@ import { SocialLayout } from './features/social/layouts/SocialLayout';
 import { CSRActivities } from './features/social/pages/CSRActivities';
 import { EmployeeParticipationDashboard } from './features/social/pages/EmployeeParticipation';
 import { DiversityDashboard } from './features/social/pages/DiversityDashboard';
+
+import { GovernanceLayout } from './features/governance/layouts/GovernanceLayout';
+import { PoliciesPage } from './features/governance/pages/PoliciesPage';
 
 import './index.css';
 
@@ -59,11 +61,13 @@ function App() {
           </Route>
 
           {/* Governance Routes */}
-          <Route path="governance" element={<PlaceholderContent title="Governance Overview" />} />
-          <Route path="governance/policies" element={<PlaceholderContent title="Policies" />} />
-          <Route path="governance/acknowledgements" element={<PlaceholderContent title="Policy Acknowledgements" />} />
-          <Route path="governance/audits" element={<PlaceholderContent title="Audits" />} />
-          <Route path="governance/compliance" element={<PlaceholderContent title="Compliance Issues" />} />
+          <Route path="governance" element={<GovernanceLayout />}>
+            <Route index element={<Navigate to="policies" replace />} />
+            <Route path="policies" element={<PoliciesPage />} />
+            <Route path="acknowledgements" element={<PoliciesPage />} />
+            <Route path="audits" element={<PoliciesPage />} />
+            <Route path="compliance" element={<PoliciesPage />} />
+          </Route>
 
           {/* Gamification Routes */}
           <Route path="gamification" element={<PlaceholderContent title="Gamification Overview" />} />

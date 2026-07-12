@@ -14,7 +14,7 @@ export const Badge: React.FC<{ children: React.ReactNode; variant?: 'success' | 
   };
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${variants[variant]} ${className}`}>
+    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${variants[variant]} ${className}`}>
       {children}
     </span>
   );
