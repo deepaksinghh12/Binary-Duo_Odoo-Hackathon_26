@@ -141,13 +141,6 @@ export const EnvironmentalGoals: React.FC = () => {
           />
         </div>
         <div className="flex gap-2 items-center">
-          <div className="relative group">
-            <Button variant="outline" rightIcon={<span className="text-xs">▼</span>} className="text-slate-600 border-slate-200 hover:bg-slate-50">Export</Button>
-            <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-lg border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 overflow-hidden">
-              <button className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-[#4CAF3A] transition-colors">PDF</button>
-              <button className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-[#4CAF3A] transition-colors">JSON</button>
-            </div>
-          </div>
           <Button variant="primary" leftIcon={<MdAdd size={20} />} onClick={() => setIsModalOpen(true)}>New Goal</Button>
         </div>
       </div>

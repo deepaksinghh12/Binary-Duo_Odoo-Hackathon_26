@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  MdFactory, MdBolt, MdLocalShipping, MdNature, MdEco, MdTrendingDown,
-  MdInventory, MdRecycling, MdOutlinedFlag, MdWaterDrop, MdAdd,
-  MdEdit, MdDelete, MdScience, MdEnergySavingsLeaf, MdDirectionsCar,
-  MdGrass, MdAir, MdOutlineElectricBolt
+  MdBolt, MdLocalShipping, MdNature, MdEco,
+  MdInventory, MdRecycling, MdOutlinedFlag, MdAdd,
+  MdEdit, MdDelete, MdScience,
+  MdGrass, MdAir
 } from 'react-icons/md';
 import { EnvironmentService } from '../services/EnvironmentService';
 import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
+import { ConfirmModal } from '../../../components/common/ConfirmModal';
+import { CreateEmissionFactorModal } from '../components/CreateEmissionFactorModal';
+import { CreateProductProfileModal } from '../components/CreateProductProfileModal';
+import { CreateCarbonTransactionModal } from '../components/CreateCarbonTransactionModal';
+import { CreateEnvironmentalGoalModal } from '../components/CreateEnvironmentalGoalModal';
 import type { EmissionFactor, ProductESGProfile, CarbonTransaction, EnvironmentalGoal } from '../types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -78,18 +83,32 @@ const getTransactionStatusColor = (s: string) => {
 
 // ── Export Utilities ──────────────────────────────────────────────────────────
 
-function downloadJSON(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+function downloadCSV(data: any[], filename: string) {
+  if (!data || !data.length) return;
+  const headers = Object.keys(data[0]).join(',');
+  const rows = data.map(obj => Object.values(obj).map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([headers + '\n' + rows], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `${filename}.json`; a.click();
+  a.href = url; a.download = `${filename}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadExcel(data: any[], filename: string) {
+  if (!data || !data.length) return;
+  const headers = Object.keys(data[0]).join('\t');
+  const rows = data.map(obj => Object.values(obj).map(v => `"${v}"`).join('\t')).join('\n');
+  const blob = new Blob([headers + '\n' + rows], { type: 'application/vnd.ms-excel' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${filename}.xls`; a.click();
   URL.revokeObjectURL(url);
 }
 
 // ── Export Dropdown ───────────────────────────────────────────────────────────
 
-interface ExportDropdownProps { label?: string; onPDF: () => void; onJSON: () => void; }
-const ExportDropdown: React.FC<ExportDropdownProps> = ({ label = 'Export', onPDF, onJSON }) => {
+interface ExportDropdownProps { label?: string; onPDF: () => void; onExcel: () => void; onCSV: () => void; }
+const ExportDropdown: React.FC<ExportDropdownProps> = ({ label = 'Export', onPDF, onExcel, onCSV }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -105,7 +124,8 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ label = 'Export', onPDF
       {open && (
         <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           <button onClick={() => { onPDF(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors border-b border-slate-50">Download PDF</button>
-          <button onClick={() => { onJSON(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors">Download JSON</button>
+          <button onClick={() => { onExcel(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors border-b border-slate-50">Download Excel</button>
+          <button onClick={() => { onCSV(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors">Download CSV</button>
         </div>
       )}
     </div>
@@ -120,6 +140,21 @@ export const EnvironmentalPage: React.FC = () => {
   const [transactions, setTransactions] = useState<CarbonTransaction[]>([]);
   const [goals, setGoals]               = useState<EnvironmentalGoal[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
+
+  // Modals state
+  const [factorToEdit, setFactorToEdit] = useState<EmissionFactor | null>(null);
+  const [factorModalOpen, setFactorModalOpen] = useState(false);
+  
+  const [productToEdit, setProductToEdit] = useState<ProductESGProfile | null>(null);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  
+  const [txToEdit] = useState<CarbonTransaction | null>(null);
+  const [txModalOpen, setTxModalOpen] = useState(false);
+  
+  const [goalToEdit, setGoalToEdit] = useState<EnvironmentalGoal | null>(null);
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
+  
+  const [itemToDelete, setItemToDelete] = useState<{ type: 'factor' | 'product' | 'transaction' | 'goal', id: string, name: string } | null>(null);
 
   const emissionsRef    = useRef<HTMLDivElement>(null);
   const productsRef     = useRef<HTMLDivElement>(null);
@@ -163,8 +198,14 @@ export const EnvironmentalPage: React.FC = () => {
     }, 120);
   }, [location.pathname, isLoading]);
 
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const handleDeleteConfirm = () => {
+    if (!itemToDelete) return;
+    const { type, id } = itemToDelete;
+    if (type === 'factor') setFactors(prev => prev.filter(item => item.id !== id));
+    else if (type === 'product') setProducts(prev => prev.filter(item => item.id !== id));
+    else if (type === 'transaction') setTransactions(prev => prev.filter(item => item.id !== id));
+    else if (type === 'goal') setGoals(prev => prev.filter(item => item.id !== id));
+    setItemToDelete(null);
   };
 
   return (
@@ -178,12 +219,10 @@ export const EnvironmentalPage: React.FC = () => {
             <p className="text-sm text-slate-500">Reference CO2e coefficients used across carbon calculations.</p>
           </div>
           <div className="flex gap-3">
-            <ExportDropdown
-              onPDF={() => window.print()}
-              onJSON={() => downloadJSON(factors, 'emission-factors')}
-            />
+
             <Button variant="primary" leftIcon={<MdAdd size={20} />}
-              className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white">
+              className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white"
+              onClick={() => { setFactorToEdit(null); setFactorModalOpen(true); }}>
               Add Factor
             </Button>
           </div>
@@ -216,10 +255,18 @@ export const EnvironmentalPage: React.FC = () => {
 
                     {/* Hover actions */}
                     <div className="flex gap-0.5 -mt-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Edit">
+                      <button 
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" 
+                        title="Edit"
+                        onClick={() => { setFactorToEdit(f); setFactorModalOpen(true); }}
+                      >
                         <MdEdit size={18} />
                       </button>
-                      <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" title="Delete">
+                      <button 
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                        title="Delete"
+                        onClick={() => setItemToDelete({ type: 'factor', id: f.id, name: f.activity })}
+                      >
                         <MdDelete size={18} />
                       </button>
                     </div>
@@ -260,71 +307,75 @@ export const EnvironmentalPage: React.FC = () => {
             <p className="text-sm text-slate-500">Carbon footprint, water use, and recycled material ratings per product.</p>
           </div>
           <div className="flex gap-3">
-            <ExportDropdown
-              onPDF={() => window.print()}
-              onJSON={() => downloadJSON(products, 'product-esg-profiles')}
-            />
             <Button variant="primary" leftIcon={<MdAdd size={20} />}
-              className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white">
+              className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white"
+              onClick={() => { setProductToEdit(null); setProductModalOpen(true); }}>
               Add Profile
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
           {isLoading ? (
-            [1, 2, 3].map(i => <div key={i} className="h-52 bg-slate-200 rounded-3xl animate-pulse" />)
-          ) : products.map(p => (
-            <div key={p.id}
-              className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] hover:border-slate-200 transition-all duration-300 group flex flex-col justify-between relative overflow-hidden"
-            >
-              <div>
-                <div className="flex items-start justify-between mb-5 pt-1">
-                  <div className="flex gap-3 items-start">
-                    <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 shadow-sm">
-                      <MdEco size={22} />
-                    </div>
-                    <div className="flex flex-col gap-1 mt-1">
-                      <Badge variant={getRatingColor(p.rating)} className="uppercase text-[9px] w-fit">
-                        Rating {p.rating}
-                      </Badge>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{p.category}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-0.5 -mt-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Edit"><MdEdit size={18} /></button>
-                    <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" title="Delete"><MdDelete size={18} /></button>
-                  </div>
-                </div>
-
-                <h3 className="font-extrabold text-slate-800 text-lg mb-2 leading-tight group-hover:text-[#0D3B3E] transition-colors">
-                  {p.productName}
-                </h3>
-                <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed mb-6">
-                  Lifecycle ESG assessment covering carbon, water consumption, and materials sourcing.
-                </p>
-              </div>
-
-              {/* 3-col metric footer */}
-              <div className="mt-auto pt-4 border-t border-slate-100/80 bg-slate-50/50 -mx-6 -mb-6 px-6 py-4 grid grid-cols-3 gap-2 group-hover:bg-slate-50 transition-colors">
-                <div className="flex flex-col items-center gap-0.5">
-                  <MdFactory size={13} className="text-orange-400" />
-                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Carbon</span>
-                  <span className="text-xs font-bold text-slate-700">{p.carbonFootprint} kg</span>
-                </div>
-                <div className="flex flex-col items-center gap-0.5">
-                  <MdWaterDrop size={13} className="text-blue-400" />
-                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Water</span>
-                  <span className="text-xs font-bold text-slate-700">{p.waterUsage} L</span>
-                </div>
-                <div className="flex flex-col items-center gap-0.5">
-                  <MdRecycling size={13} className="text-green-400" />
-                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Recycled</span>
-                  <span className="text-xs font-bold text-slate-700">{p.recycledMaterial}%</span>
-                </div>
-              </div>
+            <div className="p-8 space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)}
             </div>
-          ))}
+          ) : products.length === 0 ? (
+            <div className="p-12 text-center">
+              <MdEco size={48} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 font-medium">No product ESG profiles found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Product Name</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Category</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Rating</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Carbon (kg)</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Water (L)</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Recycled</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map(p => (
+                    <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group">
+                      <td className="px-5 py-4 font-bold text-slate-800">{p.productName}</td>
+                      <td className="px-5 py-4 text-slate-600">{p.category}</td>
+                      <td className="px-5 py-4">
+                        <Badge variant={getRatingColor(p.rating)} className="uppercase text-[10px] font-bold">
+                          {p.rating}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-4 font-medium text-slate-700">{p.carbonFootprint} kg</td>
+                      <td className="px-5 py-4 font-medium text-slate-700">{p.waterUsage} L</td>
+                      <td className="px-5 py-4 font-medium text-slate-700">{p.recycledMaterial}%</td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex gap-1 justify-end">
+                          <button 
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" 
+                            title="Edit"
+                            onClick={() => { setProductToEdit(p); setProductModalOpen(true); }}
+                          >
+                            <MdEdit size={16} />
+                          </button>
+                          <button 
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                            title="Delete"
+                            onClick={() => setItemToDelete({ type: 'product', id: p.id, name: p.productName })}
+                          >
+                            <MdDelete size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -337,10 +388,13 @@ export const EnvironmentalPage: React.FC = () => {
             <h2 className="text-xl font-bold text-[#0D3B3E]">Carbon Transactions</h2>
             <p className="text-sm text-slate-500">Manually logged carbon offsets, credits, and tax payments.</p>
           </div>
-          <ExportDropdown
-            onPDF={() => window.print()}
-            onJSON={() => downloadJSON(transactions, 'carbon-transactions')}
-          />
+          <div className="flex gap-3">
+            <ExportDropdown
+              onPDF={() => window.print()}
+              onExcel={() => downloadExcel(transactions, 'carbon-transactions')}
+              onCSV={() => downloadCSV(transactions, 'carbon-transactions')}
+            />
+          </div>
         </div>
 
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
@@ -400,87 +454,140 @@ export const EnvironmentalPage: React.FC = () => {
             <p className="text-sm text-slate-500">Track progress against reduction targets. Status updates automatically based on completion.</p>
           </div>
           <div className="flex gap-3">
-            <ExportDropdown
-              onPDF={() => window.print()}
-              onJSON={() => downloadJSON(goals, 'environmental-goals')}
-            />
             <Button variant="primary" leftIcon={<MdAdd size={20} />}
-              className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white">
+              className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white"
+              onClick={() => { setGoalToEdit(null); setGoalModalOpen(true); }}>
               New Goal
             </Button>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
           {isLoading ? (
-            [1, 2, 3].map(i => <div key={i} className="h-52 bg-slate-200 rounded-3xl animate-pulse" />)
-          ) : goals.map(g => {
-            const pct    = Math.min(100, Math.round((g.currentValue / (g.targetValue || 1)) * 100));
-            const status = computeGoalStatus(g.currentValue, g.targetValue, g.targetDate);
-            const meta   = GOAL_STATUS_META[status];
-            return (
-              <div key={g.id}
-                className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] hover:border-slate-200 transition-all duration-300 group flex flex-col justify-between relative overflow-hidden"
-              >
-                <div>
-                  <div className="flex items-start justify-between mb-5 pt-1">
-                    <div className="flex gap-3 items-start">
-                      <div className="p-3 rounded-2xl bg-teal-50 text-teal-600 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 shadow-sm">
-                        <MdOutlinedFlag size={22} />
-                      </div>
-                      <div className="flex flex-col gap-1 mt-1">
-                        <Badge variant={meta.variant} className="uppercase text-[9px] w-fit">
-                          {meta.label}
-                        </Badge>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{g.department}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-0.5 -mt-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Edit"><MdEdit size={18} /></button>
-                      <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" title="Delete"><MdDelete size={18} /></button>
-                    </div>
-                  </div>
-
-                  <h3 className="font-extrabold text-slate-800 text-lg mb-2 leading-tight group-hover:text-[#0D3B3E] transition-colors">
-                    {g.title}
-                  </h3>
-                  <p className="text-sm text-slate-500 leading-relaxed mb-4">
-                    Target: <strong>{g.targetValue} {g.unit}</strong> · Metric: {g.metric}
-                  </p>
-
-                  {/* Progress bar */}
-                  <div>
-                    <div className="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5">
-                      <span>{g.currentValue} {g.unit} current</span>
-                      <span>{pct}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                      <div
-                        className={`h-2.5 rounded-full transition-all duration-700 ${meta.barColor}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-auto pt-4 border-t border-slate-100/80 bg-slate-50/50 -mx-6 -mb-6 px-6 py-4 flex justify-between items-center group-hover:bg-slate-50 transition-colors">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 tracking-wider">Target</span>
-                    <span className="text-xs font-bold text-slate-700">{g.targetValue} {g.unit}</span>
-                  </div>
-                  <div className="flex flex-col text-right">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 mb-0.5 tracking-wider">Due</span>
-                    <span className="text-xs font-bold text-slate-700">
-                      {new Date(g.targetDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+            <div className="p-8 space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)}
+            </div>
+          ) : goals.length === 0 ? (
+            <div className="p-12 text-center">
+              <MdOutlinedFlag size={48} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 font-medium">No environmental goals found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Goal Title</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Department</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Metric</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Progress</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {goals.map(g => {
+                    const pct    = Math.min(100, Math.round((g.currentValue / (g.targetValue || 1)) * 100));
+                    const status = computeGoalStatus(g.currentValue, g.targetValue, g.targetDate);
+                    const meta   = GOAL_STATUS_META[status];
+                    return (
+                      <tr key={g.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-5 py-4 font-bold text-slate-800">{g.title}</td>
+                        <td className="px-5 py-4 text-slate-600">{g.department}</td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {g.targetValue} {g.unit} <span className="text-slate-400 text-xs">({g.metric})</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3 w-32">
+                            <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                              <div className={`h-2 rounded-full ${meta.barColor}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-500">{pct}%</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge variant={meta.variant} className="uppercase text-[10px] font-bold">
+                            {meta.label}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex gap-1 justify-end">
+                            <button 
+                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" 
+                              title="Edit"
+                              onClick={() => { setGoalToEdit(g); setGoalModalOpen(true); }}
+                            >
+                              <MdEdit size={16} />
+                            </button>
+                            <button 
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                              title="Delete"
+                              onClick={() => setItemToDelete({ type: 'goal', id: g.id, name: g.title })}
+                            >
+                              <MdDelete size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Modals */}
+      <CreateEmissionFactorModal 
+        isOpen={factorModalOpen}
+        onClose={() => setFactorModalOpen(false)}
+        initialData={factorToEdit}
+        onSuccess={(data) => {
+          if (factorToEdit) setFactors(factors.map(f => f.id === data.id ? { ...f, ...data } as EmissionFactor : f));
+          else setFactors([{ ...data, id: `fac-${Date.now()}` } as EmissionFactor, ...factors]);
+        }}
+      />
+
+      <CreateProductProfileModal 
+        isOpen={productModalOpen}
+        onClose={() => setProductModalOpen(false)}
+        initialData={productToEdit}
+        onSuccess={(data) => {
+          if (productToEdit) setProducts(products.map(p => p.id === data.id ? { ...p, ...data } as ProductESGProfile : p));
+          else setProducts([{ ...data, id: `prod-${Date.now()}` } as ProductESGProfile, ...products]);
+        }}
+      />
+
+      <CreateCarbonTransactionModal 
+        isOpen={txModalOpen}
+        onClose={() => setTxModalOpen(false)}
+        initialData={txToEdit}
+        onSuccess={(data) => {
+          if (txToEdit) setTransactions(transactions.map(t => t.id === data.id ? { ...t, ...data } as CarbonTransaction : t));
+          else setTransactions([{ ...data, id: `tx-${Date.now()}` } as CarbonTransaction, ...transactions]);
+        }}
+      />
+
+      <CreateEnvironmentalGoalModal 
+        isOpen={goalModalOpen}
+        onClose={() => setGoalModalOpen(false)}
+        initialData={goalToEdit}
+        onSuccess={(data) => {
+          if (goalToEdit) setGoals(goals.map(g => g.id === data.id ? { ...g, ...data } as EnvironmentalGoal : g));
+          else setGoals([{ ...data, id: `goal-${Date.now()}` } as EnvironmentalGoal, ...goals]);
+        }}
+      />
+
+      <ConfirmModal 
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Item"
+        message={`Are you sure you want to delete ${itemToDelete?.name}? This action cannot be undone.`}
+        confirmText="Delete"
+        isDestructive={true}
+      />
     </div>
   );
 };
+

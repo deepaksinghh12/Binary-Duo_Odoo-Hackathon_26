@@ -42,15 +42,6 @@ export const DiversityDashboard: React.FC = () => {
 
   return (
     <div className="animate-in fade-in duration-500 space-y-6 pb-8">
-      <div className="bg-[#0D3B3E] rounded-3xl p-8 text-white relative overflow-hidden">
-        <div className="absolute right-0 top-0 opacity-10 scale-150 -translate-y-1/4 translate-x-1/4">
-          <MdSupervisedUserCircle size={200} />
-        </div>
-        <div className="relative z-10 max-w-2xl">
-          <h2 className="text-3xl font-bold mb-3">Diversity & Inclusion Dashboard</h2>
-          <p className="text-blue-100">Track our progress towards a more equitable and diverse workplace. These metrics are updated quarterly based on HR data.</p>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {isLoading ? (
@@ -79,18 +70,6 @@ export const DiversityDashboard: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col justify-center items-center min-h-[300px]">
-          <MdPieChart size={64} className="text-slate-200 mb-4" />
-          <h3 className="text-lg font-bold text-slate-700 mb-2">Workforce Demographics</h3>
-          <p className="text-slate-500 text-sm text-center max-w-sm">Detailed charts and breakdowns will be available in the upcoming Q3 Diversity Report module.</p>
-        </div>
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col justify-center items-center min-h-[300px]">
-          <MdPieChart size={64} className="text-slate-200 mb-4" />
-          <h3 className="text-lg font-bold text-slate-700 mb-2">Management Distribution</h3>
-          <p className="text-slate-500 text-sm text-center max-w-sm">Detailed charts and breakdowns will be available in the upcoming Q3 Diversity Report module.</p>
-        </div>
-      </div>
     </div>
   );
 };

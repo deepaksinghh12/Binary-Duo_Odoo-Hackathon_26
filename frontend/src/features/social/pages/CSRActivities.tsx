@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { MdAdd, MdNature, MdBloodtype, MdWaterDrop, MdSchool, MdCheckCircle, MdCancel } from 'react-icons/md';
+import { MdAdd, MdNature, MdBloodtype, MdWaterDrop, MdSchool, MdCheckCircle, MdCancel, MdEdit, MdDelete } from 'react-icons/md';
 import { Button } from '../../../components/common/Button';
 import { Table } from '../../../components/common/Table';
 import { Badge } from '../../../components/common/Badge';
 import { SocialService } from '../services/SocialService';
+import { CreateCSRModal } from '../components/CreateCSRModal';
 import type { CSRActivity, EmployeeParticipation } from '../types';
 
 export const CSRActivities: React.FC = () => {
   const [activities, setActivities] = useState<CSRActivity[]>([]);
   const [participations, setParticipations] = useState<EmployeeParticipation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activityToEdit, setActivityToEdit] = useState<CSRActivity | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,6 +49,12 @@ export const CSRActivities: React.FC = () => {
       case 'approved': return 'success';
       case 'rejected': return 'danger';
       default: return 'default';
+    }
+  };
+
+  const handleDeleteActivity = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this CSR activity?')) {
+      setActivities(activities.filter(a => a.id !== id));
     }
   };
 
@@ -93,7 +102,12 @@ export const CSRActivities: React.FC = () => {
   return (
     <div className="animate-in fade-in duration-500 space-y-6 pb-8">
       <div className="flex justify-between items-center mb-6">
-        <Button variant="primary" leftIcon={<MdAdd size={20} />} className="bg-blue-500 hover:bg-blue-600 border-none shadow-blue-500/20">
+        <Button 
+          variant="primary" 
+          leftIcon={<MdAdd size={20} />} 
+          className="bg-blue-500 hover:bg-blue-600 border-none shadow-blue-500/20"
+          onClick={() => setIsModalOpen(true)}
+        >
           New Activity
         </Button>
       </div>
@@ -103,13 +117,32 @@ export const CSRActivities: React.FC = () => {
           [1, 2, 3, 4].map(i => <div key={i} className="h-40 bg-slate-200 rounded-3xl animate-pulse"></div>)
         ) : (
           activities.map((activity) => (
-            <div key={activity.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group flex flex-col justify-between">
+            <div key={activity.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-blue-100 transition-all group flex flex-col justify-between relative overflow-hidden">
               <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-2 bg-slate-50 rounded-xl ${activity.color} group-hover:scale-110 transition-transform`}>
-                    {getIcon(activity.icon)}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 bg-slate-50 rounded-xl ${activity.color} group-hover:scale-110 transition-transform`}>
+                      {getIcon(activity.icon)}
+                    </div>
+                    <h3 className="font-bold text-slate-800">{activity.title}</h3>
                   </div>
-                  <h3 className="font-bold text-slate-800">{activity.title}</h3>
+                  
+                  <div className="flex gap-0.5 -mt-2 -mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <button 
+                      onClick={() => setActivityToEdit(activity)}
+                      className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors cursor-pointer"
+                      title="Modify"
+                    >
+                      <MdEdit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteActivity(activity.id)}
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                      title="Delete"
+                    >
+                      <MdDelete size={16} />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-sm text-slate-500 space-y-1 mb-6">
                   <p><span className="font-semibold text-slate-700">{activity.participantsCount}</span> joined</p>
@@ -130,6 +163,22 @@ export const CSRActivities: React.FC = () => {
           isLoading={isLoading} 
         />
       </div>
+
+      <CreateCSRModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={(newActivity) => setActivities([newActivity as CSRActivity, ...activities])}
+      />
+      
+      <CreateCSRModal 
+        isOpen={!!activityToEdit}
+        onClose={() => setActivityToEdit(null)}
+        initialData={activityToEdit}
+        onSuccess={(updatedActivity) => {
+          setActivities(activities.map(a => a.id === updatedActivity.id ? updatedActivity as CSRActivity : a));
+          setActivityToEdit(null);
+        }}
+      />
     </div>
   );
 };

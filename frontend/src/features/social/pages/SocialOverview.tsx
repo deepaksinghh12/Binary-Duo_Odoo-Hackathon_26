@@ -3,9 +3,11 @@ import { useLocation } from 'react-router-dom';
 import {
   MdNature, MdBloodtype, MdWaterDrop, MdSchool, MdPeople,
   MdCheckCircle, MdHourglassEmpty, MdAdd, MdDownload, MdTrendingUp,
-  MdTrendingDown, MdTrendingFlat, MdStars
+  MdTrendingDown, MdTrendingFlat, MdStars, MdEdit, MdDelete
 } from 'react-icons/md';
 import { SocialService } from '../services/SocialService';
+import { CreateCSRModal } from '../components/CreateCSRModal';
+import { ConfirmModal } from '../../../components/common/ConfirmModal';
 import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
 import { Table } from '../../../components/common/Table';
@@ -114,6 +116,10 @@ export const SocialOverview: React.FC = () => {
   const [diversity, setDiversity] = useState<DiversityMetric[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isCSRModalOpen, setIsCSRModalOpen] = useState(false);
+  const [activityToEdit, setActivityToEdit] = useState<CSRActivity | null>(null);
+  const [activityToDelete, setActivityToDelete] = useState<CSRActivity | null>(null);
+
   const csrRef          = useRef<HTMLDivElement>(null);
   const participRef     = useRef<HTMLDivElement>(null);
   const diversityRef    = useRef<HTMLDivElement>(null);
@@ -134,6 +140,17 @@ export const SocialOverview: React.FC = () => {
     };
     load();
   }, []);
+
+  const handleDeleteActivity = (id: string) => {
+    setActivityToDelete(activities.find(a => a.id === id) || null);
+  };
+
+  const confirmDeleteActivity = () => {
+    if (activityToDelete) {
+      setActivities(activities.filter(a => a.id !== activityToDelete.id));
+      setActivityToDelete(null);
+    }
+  };
 
   useEffect(() => {
     if (isLoading) return;
@@ -227,7 +244,12 @@ export const SocialOverview: React.FC = () => {
             <h2 className="text-xl font-bold text-[#0D3B3E]">CSR Activities</h2>
             <p className="text-sm text-slate-500">Corporate Social Responsibility initiatives and participant stats.</p>
           </div>
-          <Button variant="primary" leftIcon={<MdAdd size={20} />} className="bg-[#4CAF3A] hover:bg-[#439c33] border-none text-white">
+          <Button 
+            variant="primary" 
+            leftIcon={<MdAdd size={20} />} 
+            className="bg-[#4CAF3A] hover:bg-[#439c33] border-none text-white"
+            onClick={() => setIsCSRModalOpen(true)}
+          >
             New Activity
           </Button>
         </div>
@@ -236,11 +258,30 @@ export const SocialOverview: React.FC = () => {
             [1, 2, 3, 4].map(i => <div key={i} className="h-44 bg-slate-200 rounded-3xl animate-pulse" />)
           ) : activities.map(act => (
             <div key={act.id}
-              className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] hover:border-slate-200 transition-all duration-300 group flex flex-col gap-4"
+              className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] hover:border-slate-200 transition-all duration-300 group flex flex-col gap-4 relative overflow-hidden"
             >
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${ACTIVITY_GRADIENTS[act.icon] ?? 'from-slate-400 to-slate-300'} flex items-center justify-center shadow-md group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300`}>
-                {getActivityIcon(act.icon)}
+              <div className="flex justify-between items-start">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${ACTIVITY_GRADIENTS[act.icon] ?? 'from-slate-400 to-slate-300'} flex items-center justify-center shadow-md group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300`}>
+                  {getActivityIcon(act.icon)}
+                </div>
+                <div className="flex gap-0.5 -mt-2 -mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <button 
+                    onClick={() => setActivityToEdit(act)}
+                    className="p-2 text-slate-400 hover:text-[#4CAF3A] hover:bg-[#4CAF3A]/10 rounded-full transition-colors cursor-pointer"
+                    title="Modify"
+                  >
+                    <MdEdit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteActivity(act.id)}
+                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                    title="Delete"
+                  >
+                    <MdDelete size={16} />
+                  </button>
+                </div>
               </div>
+              
               <div>
                 <h3 className="font-extrabold text-slate-800 text-base group-hover:text-[#0D3B3E] transition-colors">{act.title}</h3>
                 <Badge
@@ -303,6 +344,34 @@ export const SocialOverview: React.FC = () => {
           ))}
         </div>
       </div>
+      
+      <CreateCSRModal 
+        isOpen={isCSRModalOpen || !!activityToEdit}
+        onClose={() => {
+          setIsCSRModalOpen(false);
+          setActivityToEdit(null);
+        }}
+        initialData={activityToEdit}
+        onSuccess={(updatedActivity) => {
+          if (activityToEdit) {
+            setActivities(activities.map(a => a.id === updatedActivity.id ? updatedActivity as CSRActivity : a));
+          } else {
+            setActivities([updatedActivity as CSRActivity, ...activities]);
+          }
+          setIsCSRModalOpen(false);
+          setActivityToEdit(null);
+        }}
+      />
+      
+      <ConfirmModal
+        isOpen={!!activityToDelete}
+        onClose={() => setActivityToDelete(null)}
+        onConfirm={confirmDeleteActivity}
+        title="Delete CSR Activity"
+        message={`Are you sure you want to delete "${activityToDelete?.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        confirmStyle="danger"
+      />
     </div>
   );
 };

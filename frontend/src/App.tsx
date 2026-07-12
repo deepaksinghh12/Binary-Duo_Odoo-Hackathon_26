@@ -13,9 +13,12 @@ import { SocialPage } from './features/social/pages/SocialPage';
 
 import { GovernanceLayout } from './features/governance/layouts/GovernanceLayout';
 import { PoliciesPage } from './features/governance/pages/PoliciesPage';
-
+import { GamificationLayout } from './features/gamification/layouts/GamificationLayout';
+import { GamificationPage } from './features/gamification/pages/GamificationPage';
 import { SettingsLayout } from './features/settings/layouts/SettingsLayout';
 import { SettingsPage } from './features/settings/pages/SettingsPage';
+import { ReportsLayout } from './features/reports/layouts/ReportsLayout';
+import { ReportsPage } from './features/reports/pages/ReportsPage';
 
 import './index.css';
 
@@ -69,20 +72,24 @@ function App() {
           </Route>
 
           {/* Gamification Routes */}
-          <Route path="gamification" element={<PlaceholderContent title="Gamification Overview" />} />
-          <Route path="gamification/challenges"   element={<PlaceholderContent title="Challenges" />} />
-          <Route path="gamification/participation" element={<PlaceholderContent title="Challenge Participation" />} />
-          <Route path="gamification/badges"       element={<PlaceholderContent title="Badges" />} />
-          <Route path="gamification/rewards"      element={<PlaceholderContent title="Rewards" />} />
-          <Route path="gamification/leaderboard"  element={<PlaceholderContent title="Leaderboard" />} />
+          <Route path="gamification" element={<GamificationLayout />}>
+            <Route index element={<Navigate to="challenges" replace />} />
+            <Route path="challenges"    element={<GamificationPage />} />
+            <Route path="participation" element={<GamificationPage />} />
+            <Route path="badges"        element={<GamificationPage />} />
+            <Route path="rewards"       element={<GamificationPage />} />
+            <Route path="leaderboard"   element={<GamificationPage />} />
+          </Route>
 
           {/* Reports Routes */}
-          <Route path="reports" element={<PlaceholderContent title="Reports Overview" />} />
-          <Route path="reports/environmental" element={<PlaceholderContent title="Environmental Report" />} />
-          <Route path="reports/social"        element={<PlaceholderContent title="Social Report" />} />
-          <Route path="reports/governance"    element={<PlaceholderContent title="Governance Report" />} />
-          <Route path="reports/summary"       element={<PlaceholderContent title="ESG Summary" />} />
-          <Route path="reports/builder"       element={<PlaceholderContent title="Custom Report Builder" />} />
+          <Route path="reports" element={<ReportsLayout />}>
+            <Route index element={<Navigate to="environmental" replace />} />
+            <Route path="environmental" element={<ReportsPage />} />
+            <Route path="social"        element={<ReportsPage />} />
+            <Route path="governance"    element={<ReportsPage />} />
+            <Route path="summary"       element={<ReportsPage />} />
+            <Route path="builder"       element={<ReportsPage />} />
+          </Route>
 
           {/* Settings Routes */}
           <Route path="settings" element={<SettingsLayout />}>

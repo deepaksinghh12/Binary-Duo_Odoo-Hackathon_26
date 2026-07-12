@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
-export const SocialLayout: React.FC = () => {
-  const [activeId, setActiveId] = useState('csr');
+export const GamificationLayout: React.FC = () => {
+  const [activeId, setActiveId] = useState('challenges');
   const navigate  = useNavigate();
   const location  = useLocation();
 
   const tabs = [
-    { label: 'CSR Activities',        id: 'csr',           to: '/dashboard/social/csr' },
-    { label: 'Employee Participation', id: 'participation', to: '/dashboard/social/participation' },
-    { label: 'Diversity & Inclusion',  id: 'diversity',     to: '/dashboard/social/diversity' }
+    { label: 'Challenges',              id: 'challenges',    to: '/dashboard/gamification/challenges' },
+    { label: 'Challenge Participation', id: 'participation', to: '/dashboard/gamification/participation' },
+    { label: 'Badges',                  id: 'badges',        to: '/dashboard/gamification/badges' },
+    { label: 'Rewards',                 id: 'rewards',       to: '/dashboard/gamification/rewards' },
+    { label: 'Leaderboard',             id: 'leaderboard',   to: '/dashboard/gamification/leaderboard' },
   ];
 
   useEffect(() => {
@@ -56,7 +58,6 @@ export const SocialLayout: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-500">
-      {/* Social Sub-navigation */}
       <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm pt-2 pb-5 mb-1 -mt-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 overflow-x-auto custom-scrollbar shrink-0">
         <nav className="flex w-full min-w-max gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
           {tabs.map((tab) => (

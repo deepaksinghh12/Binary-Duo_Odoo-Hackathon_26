@@ -198,10 +198,7 @@ export const EnvironmentalOverview: React.FC = () => {
             <h2 className="text-xl font-bold text-[#0D3B3E]">Environmental Overview</h2>
             <p className="text-sm text-slate-500">High-level summary of your organisation's environmental footprint.</p>
           </div>
-          <ExportDropdown
-            onPNG={() => chartRef.current && downloadPNG(chartRef.current, 'env-emissions-chart')}
-            onSVG={() => chartRef.current && downloadSVG(chartRef.current, 'env-emissions-chart')}
-          />
+
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
@@ -254,40 +251,48 @@ export const EnvironmentalOverview: React.FC = () => {
             Add Profile
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
           {isLoading ? (
-            [1, 2, 3].map(i => <div key={i} className="h-48 bg-slate-200 rounded-3xl animate-pulse" />)
-          ) : products.map(p => (
-            <div key={p.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.12)] hover:border-slate-200 transition-all duration-300 group flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <Badge variant={getRatingColor(p.rating)} className="uppercase text-[10px] font-bold mb-2">Rating {p.rating}</Badge>
-                  <h3 className="font-extrabold text-slate-800 text-base group-hover:text-[#0D3B3E] transition-colors">{p.productName}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">{p.category}</p>
-                </div>
-                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform duration-300">
-                  <MdEco size={22} />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-auto pt-4 border-t border-slate-100">
-                <div className="flex flex-col items-center gap-1">
-                  <MdFactory size={14} className="text-orange-400" />
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">Carbon</span>
-                  <span className="text-xs font-bold text-slate-700">{p.carbonFootprint} kg</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <MdWaterDrop size={14} className="text-blue-400" />
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">Water</span>
-                  <span className="text-xs font-bold text-slate-700">{p.waterUsage} L</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <MdRecycling size={14} className="text-green-400" />
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">Recycled</span>
-                  <span className="text-xs font-bold text-slate-700">{p.recycledMaterial}%</span>
-                </div>
-              </div>
+            <div className="p-8 space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)}
             </div>
-          ))}
+          ) : products.length === 0 ? (
+            <div className="p-12 text-center">
+              <MdEco size={48} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 font-medium">No product ESG profiles found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Product Name</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Category</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Rating</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Carbon (kg)</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Water (L)</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Recycled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map(p => (
+                    <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                      <td className="px-5 py-4 font-bold text-slate-800">{p.productName}</td>
+                      <td className="px-5 py-4 text-slate-600">{p.category}</td>
+                      <td className="px-5 py-4">
+                        <Badge variant={getRatingColor(p.rating)} className="uppercase text-[10px] font-bold">
+                          {p.rating}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-4 font-medium text-slate-700">{p.carbonFootprint} kg</td>
+                      <td className="px-5 py-4 font-medium text-slate-700">{p.waterUsage} L</td>
+                      <td className="px-5 py-4 font-medium text-slate-700">{p.recycledMaterial}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -304,40 +309,64 @@ export const EnvironmentalOverview: React.FC = () => {
             New Goal
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
           {isLoading ? (
-            [1, 2, 3].map(i => <div key={i} className="h-44 bg-slate-200 rounded-3xl animate-pulse" />)
-          ) : goals.map(g => {
-            const pct = Math.min(100, Math.round((g.currentValue / g.targetValue) * 100));
-            return (
-              <div key={g.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-md hover:border-slate-200 transition-all duration-300 flex flex-col gap-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <Badge variant={getGoalStatusColor(g.status)} className="uppercase text-[10px] font-bold mb-2">{getGoalStatusLabel(g.status)}</Badge>
-                    <h3 className="font-extrabold text-slate-800 text-base">{g.title}</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">{g.department}</p>
-                  </div>
-                  <div className="p-2.5 bg-teal-50 text-teal-600 rounded-2xl">
-                    <MdOutlinedFlag size={20} />
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-500 mb-1.5">
-                    <span>{g.currentValue} {g.unit}</span>
-                    <span>{g.targetValue} {g.unit} target</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      className={`h-2.5 rounded-full transition-all duration-700 ${g.status === 'achieved' ? 'bg-blue-500' : g.status === 'at_risk' ? 'bg-amber-400' : 'bg-[#4CAF3A]'}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1 text-right font-medium">{pct}% complete · Due {new Date(g.targetDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
-                </div>
-              </div>
-            );
-          })}
+            <div className="p-8 space-y-3">
+              {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)}
+            </div>
+          ) : goals.length === 0 ? (
+            <div className="p-12 text-center">
+              <MdOutlinedFlag size={48} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 font-medium">No environmental goals found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Goal Title</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Department</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Progress</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                    <th className="px-5 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Due Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {goals.map(g => {
+                    const pct = Math.min(100, Math.round((g.currentValue / g.targetValue) * 100));
+                    return (
+                      <tr key={g.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                        <td className="px-5 py-4 font-bold text-slate-800">{g.title}</td>
+                        <td className="px-5 py-4 text-slate-600">{g.department}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1 w-32">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                              <span>{g.currentValue} / {g.targetValue} {g.unit}</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`h-1.5 rounded-full transition-all duration-700 ${g.status === 'achieved' ? 'bg-blue-500' : g.status === 'at_risk' ? 'bg-amber-400' : 'bg-[#4CAF3A]'}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge variant={getGoalStatusColor(g.status)} className="uppercase text-[10px] font-bold">
+                            {getGoalStatusLabel(g.status)}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4 text-slate-600 font-medium">
+                          {new Date(g.targetDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

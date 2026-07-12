@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
-  MdNature, MdBloodtype, MdWaterDrop, MdSchool, MdPeople,
+  MdNature, MdBloodtype, MdWaterDrop, MdSchool,
   MdCheckCircle, MdCancel, MdTrendingUp, MdTrendingDown, MdTrendingFlat,
-  MdSupervisedUserCircle, MdPieChart, MdAdd
+  MdAdd, MdEdit, MdDelete
 } from 'react-icons/md';
 import { SocialService } from '../services/SocialService';
+import { ConfirmModal } from '../../../components/common/ConfirmModal';
 import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
 import { Table } from '../../../components/common/Table';
+import { CreateCSRModal } from '../components/CreateCSRModal';
 import type { CSRActivity, EmployeeParticipation, DiversityMetric } from '../types';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -47,12 +49,25 @@ const getTrendIcon = (trend: string) => {
 
 // ── Export helpers ─────────────────────────────────────────────────────────────
 
-function downloadJSON(data: unknown, filename: string) {
-  const str = JSON.stringify(data, null, 2);
-  const blob = new Blob([str], { type: 'application/json' });
+function downloadCSV(data: any[], filename: string) {
+  if (!data || !data.length) return;
+  const headers = Object.keys(data[0]).join(',');
+  const rows = data.map(obj => Object.values(obj).map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([headers + '\n' + rows], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `${filename}.json`; a.click();
+  a.href = url; a.download = `${filename}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadExcel(data: any[], filename: string) {
+  if (!data || !data.length) return;
+  const headers = Object.keys(data[0]).join('\t');
+  const rows = data.map(obj => Object.values(obj).map(v => `"${v}"`).join('\t')).join('\n');
+  const blob = new Blob([headers + '\n' + rows], { type: 'application/vnd.ms-excel' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${filename}.xls`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -60,9 +75,10 @@ function downloadJSON(data: unknown, filename: string) {
 
 interface ExportDropdownProps {
   onPDF: () => void;
-  onJSON: () => void;
+  onExcel: () => void;
+  onCSV: () => void;
 }
-const ExportDropdown: React.FC<ExportDropdownProps> = ({ onPDF, onJSON }) => {
+const ExportDropdown: React.FC<ExportDropdownProps> = ({ onPDF, onExcel, onCSV }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -78,7 +94,8 @@ const ExportDropdown: React.FC<ExportDropdownProps> = ({ onPDF, onJSON }) => {
       {open && (
         <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-100 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           <button onClick={() => { onPDF(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors border-b border-slate-50">Download PDF</button>
-          <button onClick={() => { onJSON(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors">Download JSON</button>
+          <button onClick={() => { onExcel(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors border-b border-slate-50">Download Excel</button>
+          <button onClick={() => { onCSV(); setOpen(false); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 font-medium transition-colors">Download CSV</button>
         </div>
       )}
     </div>
@@ -92,7 +109,10 @@ export const SocialPage: React.FC = () => {
   const [participations, setParticipations] = useState<EmployeeParticipation[]>([]);
   const [diversity, setDiversity]         = useState<DiversityMetric[]>([]);
   const [isLoading, setIsLoading]         = useState(true);
-  const [policyToEdit, setPolicyToEdit]   = useState<CSRActivity | null>(null);
+  
+  const [isCSRModalOpen, setIsCSRModalOpen] = useState(false);
+  const [activityToEdit, setActivityToEdit] = useState<CSRActivity | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const csrRef       = useRef<HTMLDivElement>(null);
   const participRef  = useRef<HTMLDivElement>(null);
@@ -113,6 +133,12 @@ export const SocialPage: React.FC = () => {
     };
     load();
   }, []);
+
+  const handleDeleteConfirm = () => {
+    if (!itemToDelete) return;
+    setActivities(prev => prev.filter(a => a.id !== itemToDelete.id));
+    setItemToDelete(null);
+  };
 
   // Smooth scroll on tab click
   useEffect(() => {
@@ -186,7 +212,8 @@ export const SocialPage: React.FC = () => {
             <p className="text-sm text-slate-500">Manage and track active Corporate Social Responsibility initiatives.</p>
           </div>
           <Button variant="primary" leftIcon={<MdAdd size={20} />}
-            className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white">
+            className="bg-[#4CAF3A] hover:bg-[#439c33] border-none shadow-green-500/20 text-white"
+            onClick={() => setIsCSRModalOpen(true)}>
             New Activity
           </Button>
         </div>
@@ -216,6 +243,23 @@ export const SocialPage: React.FC = () => {
                         </Badge>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">CSR Initiative</span>
                       </div>
+                    </div>
+                    
+                    <div className="flex gap-0.5 -mt-1 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <button 
+                        onClick={() => { setActivityToEdit(act); setIsCSRModalOpen(true); }}
+                        className="p-2 text-slate-400 hover:text-[#4CAF3A] hover:bg-[#4CAF3A]/10 rounded-full transition-colors cursor-pointer"
+                        title="Modify"
+                      >
+                        <MdEdit size={16} />
+                      </button>
+                      <button 
+                        onClick={() => setItemToDelete({ id: act.id, name: act.title })}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                        title="Delete"
+                      >
+                        <MdDelete size={16} />
+                      </button>
                     </div>
                   </div>
 
@@ -255,7 +299,8 @@ export const SocialPage: React.FC = () => {
           </div>
           <ExportDropdown
             onPDF={() => window.print()}
-            onJSON={() => downloadJSON(participations, 'employee-participation')}
+            onExcel={() => downloadExcel(participations, 'employee-participation')}
+            onCSV={() => downloadCSV(participations, 'employee-participation')}
           />
         </div>
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
@@ -272,16 +317,7 @@ export const SocialPage: React.FC = () => {
           <p className="text-sm text-slate-500">Workforce representation, pay equity, and inclusion indicators.</p>
         </div>
 
-        {/* Hero banner — kept from DiversityDashboard */}
-        <div className="bg-[#0D3B3E] rounded-3xl p-8 text-white relative overflow-hidden mb-8">
-          <div className="absolute right-0 top-0 opacity-10 scale-150 -translate-y-1/4 translate-x-1/4">
-            <MdSupervisedUserCircle size={200} />
-          </div>
-          <div className="relative z-10 max-w-2xl">
-            <h3 className="text-2xl font-bold mb-2">Diversity & Inclusion Dashboard</h3>
-            <p className="text-blue-100 text-sm">Track progress towards a more equitable and diverse workplace. Metrics updated quarterly from HR data.</p>
-          </div>
-        </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {isLoading ? (
@@ -301,17 +337,33 @@ export const SocialPage: React.FC = () => {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[{ title: 'Workforce Demographics', subtitle: 'Detailed breakdown available in Q3 Diversity Report.' },
-            { title: 'Management Distribution', subtitle: 'Leadership diversity report coming in next module.' }].map(c => (
-            <div key={c.title} className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col justify-center items-center min-h-[260px]">
-              <MdPieChart size={56} className="text-slate-200 mb-4" />
-              <h3 className="text-lg font-bold text-slate-700 mb-2">{c.title}</h3>
-              <p className="text-slate-500 text-sm text-center max-w-sm">{c.subtitle}</p>
-            </div>
-          ))}
-        </div>
+
       </div>
+
+      <CreateCSRModal
+        isOpen={isCSRModalOpen || !!activityToEdit}
+        onClose={() => { setIsCSRModalOpen(false); setActivityToEdit(null); }}
+        onSuccess={(data) => {
+          if (activityToEdit) {
+            setActivities(prev => prev.map(a => a.id === activityToEdit.id ? { ...a, ...data } as CSRActivity : a));
+          } else {
+            setActivities(prev => [{ ...data, id: `csr-${Date.now()}`, participantsCount: 0 } as CSRActivity, ...prev]);
+          }
+          setIsCSRModalOpen(false);
+          setActivityToEdit(null);
+        }}
+        initialData={activityToEdit}
+      />
+
+      <ConfirmModal
+        isOpen={!!itemToDelete}
+        title="Delete Activity"
+        message={`Are you sure you want to delete ${itemToDelete?.name}? This action cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setItemToDelete(null)}
+      />
+
     </div>
   );
 };
