@@ -4,13 +4,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { MdEmail, MdLock } from 'react-icons/md';
 import { Input } from '../components/Input';
+import { OtpModal } from '../components/OtpModal';
 import { loginSchema, type LoginFormData } from '../utils/validation';
 import { AuthService } from '../services/auth.service';
 import logo from '../assets/logo/EcoSphere.png';
 
-export default function Login() {
+export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
   const navigate = useNavigate();
 
   const {
@@ -22,23 +25,48 @@ export default function Login() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    setErrorMsg('');
     try {
-      await AuthService.login(data);
-      navigate('/');
-    } catch (error) {
-      setErrorMsg('Invalid email or password');
+      setIsLoading(true);
+      setErrorMsg('');
+      const response = await AuthService.login(data);
+      
+      if (response.data.data?.otpRequired) {
+        // Flow B: Unverified account, open OTP modal
+        setLoginEmail(data.email);
+        setIsOtpModalOpen(true);
+      } else {
+        // Flow A: Verified, save token and login
+        if (response.data.data?.token) {
+          localStorage.setItem('token', response.data.data.token);
+        }
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.message || 'Invalid email or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVerified = (data: any) => {
+    if (data.data?.token) {
+      localStorage.setItem('token', data.data.token);
+    }
+    navigate('/dashboard');
   };
 
   return (
     <div className="h-screen bg-background flex overflow-hidden">
       {/* Left Branding Section */}
       <div className="hidden lg:flex w-1/2 h-full bg-gradient-to-br from-[#f8fafc] via-[#f0fdf4] to-[#e0f2fe] items-center justify-center p-12 relative overflow-hidden">
-        {/* Decorative elements */}
+        {/* SVG Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+          <img 
+            src="/favicon.svg" 
+            alt="" 
+            className="w-[40rem] opacity-10"
+          />
+        </div>
         <div className="absolute top-0 left-0 w-full h-full opacity-30 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#4CAF3A]/20 to-transparent"></div>
         <div className="absolute bottom-0 right-0 w-full h-full opacity-30 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-[#0D3B3E]/10 to-transparent"></div>
         
@@ -108,12 +136,19 @@ export default function Login() {
 
           <div className="mt-8 text-center text-sm text-slate-600 font-medium">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-[#4CAF3A] hover:text-[#3f7628] font-bold transition-colors">
+            <Link to="/signup" className="text-[#4CAF3A] hover:text-[#0D3B3E] font-bold transition-colors">
               Create an account
             </Link>
           </div>
         </div>
       </div>
+
+      <OtpModal 
+        isOpen={isOtpModalOpen}
+        email={loginEmail}
+        onClose={() => setIsOtpModalOpen(false)}
+        onVerified={handleVerified}
+      />
     </div>
   );
-}
+};

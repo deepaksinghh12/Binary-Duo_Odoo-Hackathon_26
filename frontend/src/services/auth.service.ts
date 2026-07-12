@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Create an axios instance for future backend integration
+// Create an axios instance for backend integration
 const api = axios.create({
-  baseURL: '/api', // Placeholder
+  baseURL: 'http://localhost:5000/api/auth',
   headers: {
     'Content-Type': 'application/json',
   }
@@ -10,24 +10,22 @@ const api = axios.create({
 
 export const AuthService = {
   login: async (credentials: any) => {
-    // TODO: Implement actual API call when backend is ready
-    // return api.post('/auth/login', credentials);
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ data: { message: 'Login successful (mock)' } });
-      }, 1000);
-    });
+    const response = await api.post('/login', credentials);
+    return response;
   },
 
   signup: async (userData: any) => {
-    // TODO: Implement actual API call when backend is ready
-    // return api.post('/auth/signup', userData);
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ data: { message: 'Signup successful (mock)' } });
-      }, 1000);
-    });
+    const response = await api.post('/signup', userData);
+    return response;
+  },
+
+  sendOtp: async (email: string) => {
+    const response = await api.post('/send-otp', { email });
+    return response;
+  },
+
+  verifyOtp: async (data: { email: string; code: string }) => {
+    const response = await api.post('/verify-otp', data);
+    return response;
   }
 };

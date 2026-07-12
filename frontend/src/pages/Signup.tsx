@@ -4,13 +4,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { MdEmail, MdLock, MdPerson } from 'react-icons/md';
 import { Input } from '../components/Input';
+import { OtpModal } from '../components/OtpModal';
 import { signupSchema, type SignupFormData } from '../utils/validation';
 import { AuthService } from '../services/auth.service';
 import logo from '../assets/logo/EcoSphere.png';
 
-export default function Signup() {
+export const Signup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const navigate = useNavigate();
 
   const {
@@ -22,22 +25,42 @@ export default function Signup() {
   });
 
   const onSubmit = async (data: SignupFormData) => {
-    setIsLoading(true);
-    setErrorMsg('');
     try {
+      setIsLoading(true);
+      setErrorMsg('');
       await AuthService.signup(data);
-      navigate('/');
-    } catch (error) {
-      setErrorMsg('Failed to create account. Please try again.');
+      setRegisteredEmail(data.email);
+      setIsOtpModalOpen(true);
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.message || 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleVerified = (data: any) => {
+    // Save token if returned, then redirect to dashboard or login
+    if (data.data?.token) {
+      localStorage.setItem('token', data.data.token);
+    }
+    navigate('/dashboard');
+  };
+
   return (
     <div className="h-screen bg-background flex overflow-hidden">
       {/* Left Branding Section */}
-      <div className="hidden lg:flex w-1/2 h-full bg-gradient-to-br from-[#f8fafc] via-[#f0fdf4] to-[#e0f2fe] items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-[#f8fafc] via-[#f0fdf4] to-[#e0f2fe] items-center justify-center p-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-slate-200/[0.04] bg-[bottom_1px_center]" />
+        
+        {/* SVG Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+          <img 
+            src="/favicon.svg" 
+            alt="" 
+            className="w-[40rem] opacity-10"
+          />
+        </div>
+
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-full h-full opacity-30 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#4CAF3A]/20 to-transparent"></div>
         <div className="absolute bottom-0 right-0 w-full h-full opacity-30 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-[#0D3B3E]/10 to-transparent"></div>
@@ -126,12 +149,19 @@ export default function Signup() {
 
           <div className="mt-8 text-center text-sm text-slate-600 font-medium">
             Already have an account?{' '}
-            <Link to="/login" className="text-[#4CAF3A] hover:text-[#3f7628] font-bold transition-colors">
-              Log in
+            <Link to="/login" className="text-[#4CAF3A] hover:text-[#0D3B3E] font-bold transition-colors">
+              Sign in
             </Link>
           </div>
         </div>
       </div>
+
+      <OtpModal 
+        isOpen={isOtpModalOpen}
+        email={registeredEmail}
+        onClose={() => setIsOtpModalOpen(false)}
+        onVerified={handleVerified}
+      />
     </div>
   );
-}
+};
