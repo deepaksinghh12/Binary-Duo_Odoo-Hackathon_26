@@ -22,7 +22,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse }) => {
   return (
     <div 
-      className={`h-screen bg-[#0D3B3E] text-slate-300 flex flex-col transition-all duration-300 shadow-2xl relative z-20 ${
+      className={`h-screen bg-[#0D3B3E] text-slate-300 flex flex-col transition-all duration-300 relative z-20 ${
         isCollapsed ? 'w-20' : 'w-72'
       }`}
     >
