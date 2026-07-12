@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -8,7 +8,10 @@ import { notFound } from '../middleware/notFound';
 import { errorHandler } from '../middleware/errorHandler';
 
 // ─── Feature Routes ───────────────────────────────────────────────────────────
-// (Imported and mounted as features are built — Step 1 only has health/test)
+import authRoutes from '../features/auth/auth.routes';
+import dashboardRoutes from '../features/dashboard/dashboard.routes';
+import departmentsRoutes from '../features/departments/departments.routes';
+import categoriesRoutes from '../features/categories/categories.routes';
 
 export const createApp = (): Application => {
   const app = express();
@@ -55,7 +58,7 @@ export const createApp = (): Application => {
   app.use(globalRateLimiter);
 
   // ── Health & Test Routes ──────────────────────────────────────────────────
-  app.get('/health', (_req: express.Request, res: express.Response) => {
+  app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({
       success: true,
       message: 'EcoSphere API is running',
@@ -64,18 +67,18 @@ export const createApp = (): Application => {
     });
   });
 
-  app.get('/test', (_req: express.Request, res: express.Response) => {
+  app.get('/test', (_req: Request, res: Response) => {
     res.status(200).json({
       success: true,
       message: 'Test route OK',
     });
   });
 
-  // ── Feature Routes (mounted here as each step is built) ──────────────────
-  // app.use('/api/auth', authRoutes);           // Step 3
-  // app.use('/api/departments', deptRoutes);   // Step 4
-  // app.use('/api/categories', catRoutes);     // Step 4
-  // ... more routes added per step
+  // ── Feature Routes ────────────────────────────────────────────────────────
+  app.use('/api/auth', authRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/departments', departmentsRoutes);
+  app.use('/api/categories', categoriesRoutes);
 
   // ── 404 + Error Handler (always last) ────────────────────────────────────
   app.use(notFound);
