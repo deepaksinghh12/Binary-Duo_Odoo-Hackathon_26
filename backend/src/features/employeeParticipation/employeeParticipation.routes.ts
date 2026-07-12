@@ -3,6 +3,7 @@ import { employeeParticipationService } from './employeeParticipation.service';
 import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { AuthenticatedRequest } from '../../shared/types';
+import { upload } from '../../middleware/upload';
 
 const router = Router();
 
@@ -37,10 +38,15 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // Join activity
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', upload.single('proof'), async (req: any, res: Response, next: NextFunction) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const participation = await employeeParticipationService.joinActivity(req.body, authReq.user.userId);
+    // Attach the uploaded file path to the request body if it exists
+    const data = { ...req.body };
+    if (req.file) {
+      data.proof_file_url = `/uploads/${req.file.filename}`;
+    }
+    const participation = await employeeParticipationService.joinActivity(data, authReq.user.userId);
     res.status(201).json(participation);
   } catch (err) {
     next(err);

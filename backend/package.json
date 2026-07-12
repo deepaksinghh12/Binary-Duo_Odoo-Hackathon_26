@@ -40,6 +40,7 @@
     "@types/ioredis": "^4.28.10",
     "@types/redis": "^4.0.10",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.80.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
@@ -50,9 +51,12 @@
     "jsonwebtoken": "^9.0.3",
     "knex": "^3.3.0",
     "morgan": "^1.11.0",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",
     "redis": "^6.1.0",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
     "zod": "^4.4.3"
   }
 }

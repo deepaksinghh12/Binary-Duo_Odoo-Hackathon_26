@@ -6,6 +6,8 @@ import { env } from './env';
 import { globalRateLimiter } from '../middleware/rateLimiter';
 import { notFound } from '../middleware/notFound';
 import { errorHandler } from '../middleware/errorHandler';
+import path from 'path';
+import { setupSwagger } from './swagger';
 
 // ─── Feature Routes ───────────────────────────────────────────────────────────
 import authRoutes from '../features/auth/auth.routes';
@@ -71,6 +73,12 @@ export const createApp = (): Application => {
   // ── Request Parsing (size limit prevents large payload attacks) ───────────
   app.use(express.json({ limit: '10kb' }));
   app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+  // ── Static Files (Uploads) ────────────────────────────────────────────────
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+  // ── API Documentation (Swagger) ───────────────────────────────────────────
+  setupSwagger(app);
 
   // ── Request Logging ───────────────────────────────────────────────────────
   if (env.isDev) {

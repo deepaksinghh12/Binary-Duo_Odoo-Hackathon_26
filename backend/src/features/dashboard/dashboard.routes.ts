@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../../middleware/authenticate';
+import { cacheMiddleware } from '../../middleware/cache';
 import { dashboardService } from './dashboard.service';
 import { sendSuccess } from '../../utils/response';
 import { UserRole } from '../../shared/types';
@@ -16,6 +17,7 @@ router.use(authenticate);
  */
 router.get(
   '/summary',
+  cacheMiddleware(300), // 5 minutes cache
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.userId;
@@ -51,6 +53,7 @@ router.get(
  */
 router.get(
   '/emission-trend',
+  cacheMiddleware(300),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.userId;

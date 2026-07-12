@@ -23,6 +23,10 @@ const bootstrap = async (): Promise<void> => {
     console.log(`   Health check: http://localhost:${env.PORT}/health\n`);
   });
 
+  // ── Initialize Background Jobs (BullMQ) ───────────────────────────────────
+  const { initJobs } = require('./jobs/queue');
+  await initJobs();
+
   // ── Scheduled Background Jobs (12-hour intervals) ─────────────────────────
   const { NotificationsService } = require('./features/notifications/notifications.service');
   const notificationsService = new NotificationsService();

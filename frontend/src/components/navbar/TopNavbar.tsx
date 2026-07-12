@@ -37,7 +37,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ toggleSidebar }) => {
   };
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userEmail = user.email || 'Admin User';
+  const userName = user.name || 'Akshat Sharma';
+  const userRole = user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Administrator';
   const { title, icon } = getPageInfo();
 
   return (
@@ -70,8 +71,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ toggleSidebar }) => {
 
         <div className="flex items-center gap-3 pl-2">
           <div className="hidden md:block text-right">
-            <div className="text-sm font-bold text-[#0D3B3E]">Akshat Sharma</div>
-            <div className="text-xs text-slate-500">Administrator</div>
+            <div className="text-sm font-bold text-[#0D3B3E]">{userName}</div>
+            <div className="text-xs text-slate-500">{userRole}</div>
           </div>
           <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
             <MdAccountCircle size={28} />
