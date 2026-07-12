@@ -4,19 +4,18 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
-import { EmissionFactorList } from './features/environmental/pages/EmissionFactorList';
-import { ProductESGProfiles } from './features/environmental/pages/ProductESGProfiles';
-import { CarbonTransactions } from './features/environmental/pages/CarbonTransactions';
-import { EnvironmentalGoals } from './features/environmental/pages/EnvironmentalGoals';
+
 import { EnvironmentalLayout } from './features/environmental/layouts/EnvironmentalLayout';
+import { EnvironmentalPage } from './features/environmental/pages/EnvironmentalPage';
 
 import { SocialLayout } from './features/social/layouts/SocialLayout';
-import { CSRActivities } from './features/social/pages/CSRActivities';
-import { EmployeeParticipationDashboard } from './features/social/pages/EmployeeParticipation';
-import { DiversityDashboard } from './features/social/pages/DiversityDashboard';
+import { SocialPage } from './features/social/pages/SocialPage';
 
 import { GovernanceLayout } from './features/governance/layouts/GovernanceLayout';
 import { PoliciesPage } from './features/governance/pages/PoliciesPage';
+
+import { SettingsLayout } from './features/settings/layouts/SettingsLayout';
+import { SettingsPage } from './features/settings/pages/SettingsPage';
 
 import './index.css';
 
@@ -43,54 +42,56 @@ function App() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
           
-          {/* Environmental Routes */}
+          {/* Environmental Routes — all point to unified EnvironmentalPage */}
           <Route path="environmental" element={<EnvironmentalLayout />}>
             <Route index element={<Navigate to="emissions" replace />} />
-            <Route path="emissions" element={<EmissionFactorList />} />
-            <Route path="products" element={<ProductESGProfiles />} />
-            <Route path="transactions" element={<CarbonTransactions />} />
-            <Route path="goals" element={<EnvironmentalGoals />} />
+            <Route path="emissions"    element={<EnvironmentalPage />} />
+            <Route path="products"     element={<EnvironmentalPage />} />
+            <Route path="transactions" element={<EnvironmentalPage />} />
+            <Route path="goals"        element={<EnvironmentalPage />} />
           </Route>
 
-          {/* Social Routes */}
+          {/* Social Routes — all point to unified SocialPage */}
           <Route path="social" element={<SocialLayout />}>
             <Route index element={<Navigate to="csr" replace />} />
-            <Route path="csr" element={<CSRActivities />} />
-            <Route path="participation" element={<EmployeeParticipationDashboard />} />
-            <Route path="diversity" element={<DiversityDashboard />} />
+            <Route path="csr"           element={<SocialPage />} />
+            <Route path="participation" element={<SocialPage />} />
+            <Route path="diversity"     element={<SocialPage />} />
           </Route>
 
-          {/* Governance Routes */}
+          {/* Governance Routes — all point to unified PoliciesPage */}
           <Route path="governance" element={<GovernanceLayout />}>
             <Route index element={<Navigate to="policies" replace />} />
-            <Route path="policies" element={<PoliciesPage />} />
+            <Route path="policies"         element={<PoliciesPage />} />
             <Route path="acknowledgements" element={<PoliciesPage />} />
-            <Route path="audits" element={<PoliciesPage />} />
-            <Route path="compliance" element={<PoliciesPage />} />
+            <Route path="audits"           element={<PoliciesPage />} />
+            <Route path="compliance"       element={<PoliciesPage />} />
           </Route>
 
           {/* Gamification Routes */}
           <Route path="gamification" element={<PlaceholderContent title="Gamification Overview" />} />
-          <Route path="gamification/challenges" element={<PlaceholderContent title="Challenges" />} />
+          <Route path="gamification/challenges"   element={<PlaceholderContent title="Challenges" />} />
           <Route path="gamification/participation" element={<PlaceholderContent title="Challenge Participation" />} />
-          <Route path="gamification/badges" element={<PlaceholderContent title="Badges" />} />
-          <Route path="gamification/rewards" element={<PlaceholderContent title="Rewards" />} />
-          <Route path="gamification/leaderboard" element={<PlaceholderContent title="Leaderboard" />} />
+          <Route path="gamification/badges"       element={<PlaceholderContent title="Badges" />} />
+          <Route path="gamification/rewards"      element={<PlaceholderContent title="Rewards" />} />
+          <Route path="gamification/leaderboard"  element={<PlaceholderContent title="Leaderboard" />} />
 
           {/* Reports Routes */}
           <Route path="reports" element={<PlaceholderContent title="Reports Overview" />} />
           <Route path="reports/environmental" element={<PlaceholderContent title="Environmental Report" />} />
-          <Route path="reports/social" element={<PlaceholderContent title="Social Report" />} />
-          <Route path="reports/governance" element={<PlaceholderContent title="Governance Report" />} />
-          <Route path="reports/summary" element={<PlaceholderContent title="ESG Summary" />} />
-          <Route path="reports/builder" element={<PlaceholderContent title="Custom Report Builder" />} />
+          <Route path="reports/social"        element={<PlaceholderContent title="Social Report" />} />
+          <Route path="reports/governance"    element={<PlaceholderContent title="Governance Report" />} />
+          <Route path="reports/summary"       element={<PlaceholderContent title="ESG Summary" />} />
+          <Route path="reports/builder"       element={<PlaceholderContent title="Custom Report Builder" />} />
 
           {/* Settings Routes */}
-          <Route path="settings" element={<PlaceholderContent title="Settings Overview" />} />
-          <Route path="settings/departments" element={<PlaceholderContent title="Departments" />} />
-          <Route path="settings/categories" element={<PlaceholderContent title="Categories" />} />
-          <Route path="settings/esg" element={<PlaceholderContent title="ESG Configuration" />} />
-          <Route path="settings/notifications" element={<PlaceholderContent title="Notification Settings" />} />
+          <Route path="settings" element={<SettingsLayout />}>
+            <Route index element={<Navigate to="departments" replace />} />
+            <Route path="departments"   element={<SettingsPage />} />
+            <Route path="categories"    element={<SettingsPage />} />
+            <Route path="esg"           element={<SettingsPage />} />
+            <Route path="notifications" element={<SettingsPage />} />
+          </Route>
         </Route>
       </Routes>
     </>
