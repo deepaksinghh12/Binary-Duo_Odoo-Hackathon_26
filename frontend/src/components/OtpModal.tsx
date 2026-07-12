@@ -20,7 +20,7 @@ export const OtpModal: React.FC<OtpModalProps> = ({ isOpen, email, onClose, onVe
 
   // Timer logic
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isOpen && timer > 0) {
       interval = setInterval(() => {
         setTimer((prev) => prev - 1);
@@ -172,7 +172,7 @@ export const OtpModal: React.FC<OtpModalProps> = ({ isOpen, email, onClose, onVe
             {otp.map((digit, index) => (
               <input
                 key={index}
-                ref={(el) => (inputRefs.current[index] = el)}
+                ref={(el) => { inputRefs.current[index] = el; }}
                 type="text"
                 inputMode="numeric"
                 maxLength={1}
