@@ -1,5 +1,5 @@
 import db from '../../database/knex';
-import { UserRecord, OtpRecord } from './auth.types';
+import { UserRecord, OtpRecord, RefreshTokenRecord } from './auth.types';
 import { UserRole } from '../../shared/types';
 
 export const authRepository = {
@@ -31,7 +31,7 @@ export const authRepository = {
         password_hash: user.password_hash,
         role: user.role,
         department_id: user.department_id || null,
-        is_verified: false, // Default to unverified until OTP check
+        is_verified: false,
       })
       .returning('*');
 
@@ -91,4 +91,48 @@ export const authRepository = {
       .where({ email })
       .update({ is_verified: true, is_active: true });
   },
+
+  /**
+   * Save a refresh token.
+   */
+  async saveRefreshToken(userId: string, token: string, expiresAt: Date): Promise<RefreshTokenRecord> {
+    const [record] = await db<RefreshTokenRecord>('refresh_tokens')
+      .insert({
+        user_id: userId,
+        token,
+        expires_at: expiresAt,
+        is_revoked: false,
+      })
+      .returning('*');
+    return record;
+  },
+
+  /**
+   * Find a refresh token.
+   */
+  async findRefreshToken(token: string): Promise<RefreshTokenRecord | undefined> {
+    return db<RefreshTokenRecord>('refresh_tokens')
+      .where({ token, is_revoked: false })
+      .andWhere('expires_at', '>', new Date())
+      .first();
+  },
+
+  /**
+   * Revoke a specific refresh token.
+   */
+  async revokeRefreshToken(token: string): Promise<void> {
+    await db('refresh_tokens')
+      .where({ token })
+      .update({ is_revoked: true, updated_at: new Date() });
+  },
+
+  /**
+   * Revoke all active refresh tokens for a user.
+   */
+  async revokeAllUserRefreshTokens(userId: string): Promise<void> {
+    await db('refresh_tokens')
+      .where({ user_id: userId, is_revoked: false })
+      .update({ is_revoked: true, updated_at: new Date() });
+  },
 };
+export default authRepository;

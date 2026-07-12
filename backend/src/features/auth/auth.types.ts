@@ -22,6 +22,10 @@ export interface VerifyOtpInput {
   code: string;
 }
 
+export interface RefreshTokenInput {
+  refreshToken: string;
+}
+
 export interface PendingSignup {
   name: string;
   email: string;
@@ -29,6 +33,7 @@ export interface PendingSignup {
   role: UserRole;
   departmentId?: string;
   code: string;
+  attempts: number; // Verification attempts (max 5)
 }
 
 export interface UserRecord {
@@ -55,6 +60,16 @@ export interface OtpRecord {
   updated_at: Date;
 }
 
+export interface RefreshTokenRecord {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: Date;
+  is_revoked: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface AuthResponseData {
   user: {
     id: string;
@@ -65,5 +80,6 @@ export interface AuthResponseData {
     xpTotal: number;
     isVerified: boolean;
   };
-  token: string;
+  token: string; // Access Token
+  refreshToken?: string;
 }

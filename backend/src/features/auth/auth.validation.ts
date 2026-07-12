@@ -27,3 +27,7 @@ export const verifyOtpSchema = z.object({
   email: z.string().email('Invalid email address'),
   code: z.string().length(6, 'Verification code must be exactly 6 digits').regex(/^[0-9]+$/, 'Code must contain numbers only'),
 });
+
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});

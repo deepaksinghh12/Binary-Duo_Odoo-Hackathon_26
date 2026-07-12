@@ -83,4 +83,39 @@ router.post(
   }
 );
 
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    Rotate session: refresh access and refresh token pair
+ * @access  Public
+ */
+router.post(
+  '/refresh',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await authService.refreshSession(req.body);
+      sendSuccess(res, data, 'Session refreshed successfully', 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Invalidate refresh token session
+ * @access  Public
+ */
+router.post(
+  '/logout',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { refreshToken } = req.body;
+      await authService.logout(refreshToken);
+      sendSuccess(res, null, 'Logged out successfully', 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;
