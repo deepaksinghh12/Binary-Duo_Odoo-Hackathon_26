@@ -95,3 +95,15 @@
     @apply fixed bottom-4 right-4 z-50 flex items-center w-full max-w-sm overflow-hidden bg-card rounded-lg shadow-lg border p-4 transition-all duration-300;
   }
 }
+
+@layer base {
+  /* Override browser default autofill blue background */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #f8fafc inset !important;
+    -webkit-text-fill-color: #0D3B3E !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}

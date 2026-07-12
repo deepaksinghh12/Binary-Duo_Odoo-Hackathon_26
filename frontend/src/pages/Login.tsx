@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { MdEmail, MdLock } from 'react-icons/md';
 import { Input } from '../components/Input';
 import { OtpModal } from '../components/OtpModal';
@@ -11,7 +12,6 @@ import logo from '../assets/logo/EcoSphere.png';
 
 export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const navigate = useNavigate();
@@ -27,7 +27,6 @@ export const Login: React.FC = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true);
-      setErrorMsg('');
       const response = await AuthService.login(data);
       
       if (response.data.data?.otpRequired) {
@@ -38,11 +37,27 @@ export const Login: React.FC = () => {
         // Flow A: Verified, save token and login
         if (response.data.data?.token) {
           localStorage.setItem('token', response.data.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.data.user));
         }
         navigate('/dashboard');
       }
     } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Invalid email or password. Please try again.');
+      let msg = error.response?.data?.message || 'Invalid email or password. Please try again.';
+      
+      // Filter out raw SQL or Database errors
+      const lowerMsg = msg.toLowerCase();
+      if (lowerMsg.includes('select ') || lowerMsg.includes('relation ') || lowerMsg.includes('syntax error')) {
+        msg = 'Our servers are experiencing an issue. Please try again later.';
+      }
+      
+      toast.error(msg, {
+        style: {
+          borderRadius: '10px',
+          background: '#fff',
+          color: '#ef4444',
+          fontWeight: 500,
+        },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -89,13 +104,7 @@ export const Login: React.FC = () => {
             <p className="text-slate-500 font-medium text-base">Access your dashboard</p>
           </div>
           
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {errorMsg && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100 font-medium text-center">
-                {errorMsg}
-              </div>
-            )}
-            
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="flex flex-col gap-3 pt-2">
               <Input
                 label="Email Address"

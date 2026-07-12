@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { MdEmail, MdLock, MdPerson } from 'react-icons/md';
 import { Input } from '../components/Input';
 import { OtpModal } from '../components/OtpModal';
@@ -11,7 +12,6 @@ import logo from '../assets/logo/EcoSphere.png';
 
 export const Signup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
   const navigate = useNavigate();
@@ -27,12 +27,26 @@ export const Signup: React.FC = () => {
   const onSubmit = async (data: SignupFormData) => {
     try {
       setIsLoading(true);
-      setErrorMsg('');
       await AuthService.signup(data);
       setRegisteredEmail(data.email);
       setIsOtpModalOpen(true);
     } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Failed to create account. Please try again.');
+      let msg = error.response?.data?.message || 'Failed to create account. Please try again.';
+      
+      // Filter out raw SQL or Database errors
+      const lowerMsg = msg.toLowerCase();
+      if (lowerMsg.includes('select ') || lowerMsg.includes('relation ') || lowerMsg.includes('syntax error')) {
+        msg = 'Our servers are experiencing an issue. Please try again later.';
+      }
+      
+      toast.error(msg, {
+        style: {
+          borderRadius: '10px',
+          background: '#fff',
+          color: '#ef4444',
+          fontWeight: 500,
+        },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -82,17 +96,11 @@ export const Signup: React.FC = () => {
             <div className="lg:hidden flex justify-center mb-8">
               <img src={logo} alt="EcoSphere Logo" className="w-48 object-contain" />
             </div>
-            <h1 className="text-3xl font-extrabold text-[#0D3B3E] mb-1 tracking-wide uppercase">CREATE ACCOUNT</h1>
-            <p className="text-slate-500 font-medium text-base">Register your ESG profile</p>
+            <h1 className="text-3xl font-extrabold text-[#0D3B3E] mb-1 tracking-wide uppercase">SIGN UP</h1>
+            <p className="text-slate-500 font-medium text-base">Create your account</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {errorMsg && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100 font-medium text-center">
-                {errorMsg}
-              </div>
-            )}
-
             <div className="flex flex-col gap-3 pt-2">
               <Input
                 label="Full Name"
@@ -140,10 +148,10 @@ export const Signup: React.FC = () => {
                 {isLoading ? (
                   <span className="flex items-center justify-center">
                     <span className="loader border-[3px] border-white/30 border-r-white h-5 w-5 mr-2"></span>
-                    CREATING ACCOUNT...
+                    SIGNING UP...
                   </span>
                 ) : (
-                  'CREATE ACCOUNT'
+                  'SIGN UP'
                 )}
               </button>
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MdClose } from 'react-icons/md';
+import { MdClose, MdEmail, MdCheckCircle } from 'react-icons/md';
 import { AuthService } from '../services/auth.service';
+import toast from 'react-hot-toast';
 
 interface OtpModalProps {
   isOpen: boolean;
@@ -10,12 +11,12 @@ interface OtpModalProps {
 }
 
 export const OtpModal: React.FC<OtpModalProps> = ({ isOpen, email, onClose, onVerified }) => {
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Timer logic
   useEffect(() => {
@@ -33,34 +34,71 @@ export const OtpModal: React.FC<OtpModalProps> = ({ isOpen, email, onClose, onVe
   // Focus input on open
   useEffect(() => {
     if (isOpen) {
-      setOtp('');
-      setErrorMsg('');
+      setIsSuccess(false);
+      setOtp(['', '', '', '', '', '']);
       setTimer(60);
       setCanResend(false);
       setTimeout(() => {
-        inputRef.current?.focus();
+        inputRefs.current[0]?.focus();
       }, 100);
     }
   }, [isOpen]);
 
+  const handleChange = (index: number, value: string) => {
+    if (!/^[0-9]*$/.test(value)) return;
+    const newOtp = [...otp];
+    // Allow replacing a digit if they type a new one
+    newOtp[index] = value.substring(value.length - 1); 
+    setOtp(newOtp);
+
+    // Move to next input
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+    if (!pastedData) return;
+    
+    const newOtp = [...otp];
+    for (let i = 0; i < pastedData.length; i++) {
+      newOtp[i] = pastedData[i];
+    }
+    setOtp(newOtp);
+    
+    const nextIndex = Math.min(pastedData.length, 5);
+    inputRefs.current[nextIndex]?.focus();
+  };
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 6) {
-      setErrorMsg('Please enter a valid 6-digit OTP.');
+    const otpString = otp.join('');
+    if (otpString.length !== 6) {
+      toast.error('Please enter a valid 6-digit code.');
       return;
     }
 
     try {
       setIsLoading(true);
-      setErrorMsg('');
-      const response = await AuthService.verifyOtp({ email, code: otp });
+      const response = await AuthService.verifyOtp({ email, code: otpString });
       if (response.data.success) {
-        onVerified(response.data);
+        setIsSuccess(true);
+        setTimeout(() => {
+          onVerified(response.data);
+        }, 1500);
       } else {
-        setErrorMsg(response.data.message || 'Invalid OTP.');
+        toast.error(response.data.message || 'Invalid code.');
       }
     } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Failed to verify OTP. Please try again.');
+      toast.error(error.response?.data?.message || 'Failed to verify code. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -69,88 +107,122 @@ export const OtpModal: React.FC<OtpModalProps> = ({ isOpen, email, onClose, onVe
   const handleResend = async () => {
     if (!canResend) return;
     try {
-      setErrorMsg('');
       await AuthService.sendOtp(email);
       setTimer(60);
       setCanResend(false);
+      toast.success('Verification code resent successfully.');
     } catch (error: any) {
-      setErrorMsg(error.response?.data?.message || 'Failed to resend OTP.');
+      toast.error(error.response?.data?.message || 'Failed to resend code.');
     }
   };
 
   if (!isOpen) return null;
 
+  if (isSuccess) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0D3B3E]/60 backdrop-blur-md p-4 transition-all">
+        <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 sm:p-12 shadow-[0_40px_80px_-20px_rgba(13,59,62,0.5)] relative border border-white/20 animate-in fade-in zoom-in-95 duration-300 overflow-hidden flex flex-col items-center text-center">
+          <div className="absolute top-0 left-0 w-full h-full opacity-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#4CAF3A]/20 via-transparent to-transparent pointer-events-none"></div>
+          
+          <div className="w-24 h-24 bg-[#4CAF3A]/10 flex items-center justify-center rounded-full mb-6 relative z-10">
+            <MdCheckCircle size={56} className="text-[#4CAF3A]" />
+          </div>
+          
+          <h2 className="text-3xl font-extrabold text-[#0D3B3E] mb-3 tracking-tight relative z-10">Email Verified!</h2>
+          <p className="text-slate-500 text-base leading-relaxed relative z-10">
+            Your account has been successfully verified. Redirecting to your dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const isOtpComplete = otp.join('').length === 6;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0D3B3E]/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl w-full max-w-sm p-8 shadow-[0_30px_60px_-15px_rgba(13,59,62,0.4)] relative border-2 border-[#0D3B3E]/10 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0D3B3E]/60 backdrop-blur-md p-4 transition-all">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-md p-6 sm:p-10 shadow-[0_40px_80px_-20px_rgba(13,59,62,0.5)] relative border border-white/20 animate-in fade-in zoom-in-95 duration-300 overflow-hidden">
+        
+        {/* Background glow effect */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#4CAF3A]/10 via-transparent to-transparent pointer-events-none"></div>
+
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-[#0D3B3E] transition-colors"
+          className="absolute top-6 right-6 text-slate-400 hover:text-[#0D3B3E] bg-slate-50 hover:bg-slate-100 rounded-full p-2 transition-all duration-200 z-10"
         >
-          <MdClose size={24} />
+          <MdClose size={20} />
         </button>
 
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-extrabold text-[#0D3B3E] mb-2 uppercase tracking-wide">Verification</h2>
-          <p className="text-slate-500 text-sm font-medium">
-            We've sent a 6-digit code to<br/>
-            <span className="font-bold text-[#4CAF3A]">{email}</span>
+        <div className="flex justify-center mb-6 relative z-10">
+          <div className="w-20 h-20 bg-gradient-to-tr from-[#4CAF3A]/20 to-[#4CAF3A]/5 flex items-center justify-center rounded-full shadow-inner">
+            <MdEmail size={34} className="text-[#4CAF3A]" />
+          </div>
+        </div>
+
+        <div className="text-center mb-10 relative z-10">
+          <h2 className="text-3xl font-extrabold text-[#0D3B3E] mb-3 tracking-tight">Check your email</h2>
+          <p className="text-slate-500 text-base leading-relaxed">
+            Enter the verification code sent to<br/>
+            <span className="font-bold text-[#0D3B3E] break-all">{email}</span>
           </p>
         </div>
 
-        <form onSubmit={handleVerify} className="space-y-6">
-          {errorMsg && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-xl border border-red-100 font-medium text-center">
-              {errorMsg}
-            </div>
-          )}
-
-          <div>
-            <input
-              ref={inputRef}
-              type="text"
-              maxLength={6}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="000000"
-              className="w-full text-center text-3xl tracking-[0.5em] font-bold text-[#0D3B3E] bg-slate-50/50 border border-slate-200 rounded-xl h-16 focus:bg-white focus:outline-none focus:border-[#4CAF3A] focus:ring-1 focus:ring-[#4CAF3A] transition-all placeholder:text-slate-300 placeholder:font-normal"
-            />
+        <form onSubmit={handleVerify} className="space-y-8 relative z-10">
+          <div className="flex justify-center gap-2 sm:gap-3" onPaste={handlePaste}>
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => (inputRefs.current[index] = el)}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                placeholder="0"
+                className="w-11 h-14 sm:w-12 sm:h-14 md:w-14 md:h-16 text-center text-3xl font-bold text-[#0D3B3E] bg-slate-50/80 border-2 border-slate-200 rounded-2xl focus:bg-white focus:outline-none focus:border-[#4CAF3A] focus:shadow-[0_0_20px_rgba(76,175,58,0.15)] focus:-translate-y-1 transition-all duration-200 placeholder:text-slate-300 placeholder:text-2xl focus:placeholder-transparent"
+              />
+            ))}
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading || otp.length !== 6}
-            className="btn-primary w-full py-3 rounded-full text-sm font-bold tracking-wide shadow-lg shadow-[#4CAF3A]/25 h-12 uppercase cursor-pointer hover:bg-[#0D3B3E] hover:shadow-[#0D3B3E]/40 active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center">
-                <span className="loader border-[3px] border-white/30 border-r-white h-4 w-4 mr-2"></span>
-                VERIFYING...
-              </span>
-            ) : (
-              'VERIFY OTP'
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm font-medium">
-          <p className="text-slate-500">
-            Didn't receive OTP?{' '}
+          <div className="text-center text-[15px] font-medium">
+            <span className="text-slate-500">
+              Didn't get a code?{' '}
+            </span>
             {canResend ? (
               <button 
                 type="button" 
                 onClick={handleResend}
-                className="text-[#4CAF3A] hover:text-[#0D3B3E] hover:underline font-bold transition-colors"
+                className="text-[#4CAF3A] hover:text-[#0D3B3E] font-bold cursor-pointer transition-colors ml-1"
               >
-                Resend OTP
+                Resend now
               </button>
             ) : (
-              <span className="text-slate-400">
-                Resend in <span className="font-bold text-[#0D3B3E]">{timer}s</span>
+              <span className="text-slate-400 font-bold ml-1">
+                Resend in {timer}s
               </span>
             )}
-          </p>
-        </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading || !isOtpComplete}
+            className={`w-full py-4 rounded-2xl text-[15px] font-bold tracking-wide uppercase transition-all duration-300 ${
+              isOtpComplete 
+                ? 'bg-[#4CAF3A] text-white shadow-[0_10px_20px_-10px_rgba(76,175,58,0.5)] hover:bg-[#0D3B3E] hover:shadow-[0_10px_20px_-10px_rgba(13,59,62,0.5)] active:scale-[0.98] cursor-pointer' 
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+            }`}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <span className="loader border-[3px] border-white/30 border-r-white h-5 w-5 mr-3"></span>
+                Verifying...
+              </span>
+            ) : (
+              'Verify Email'
+            )}
+          </button>
+        </form>
       </div>
     </div>
   );
